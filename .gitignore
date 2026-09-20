@@ -111,3 +111,6 @@ InitTestScene*.unity*
 # フォントアセット
 /[Aa]ssets/Font/
 /[Aa]ssets/Font.meta
+
+# Riderが作成するプロジェクト設定ファイル・ワークスペースの保存場所
+.idea/
