@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TF.Battle.Commands;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
@@ -11,9 +10,6 @@ namespace TF.MasterData
 {
     public sealed class MasterDataAccessor : MonoBehaviour
     {
-        private const string BattleCommandData = "BattleCommandData";
-        private const string BattleCombatantData = "BattleCombatantData";
-        
         /// <summary>
         /// 外部からアクセスするためのインスタンス
         /// </summary>
@@ -76,7 +72,13 @@ namespace TF.MasterData
             if (_isInitializationStarted)
             {
                 await UniTask.WaitUntil(() => _isDestroyed || !_isInitializing);
-                return _isDestroyed || IsInitialized;
+                return !_isDestroyed && IsInitialized;
+            }
+
+            if (_loaders.Count == 0)
+            {
+                Debug.LogError("読み込むマスタが登録されていません。", this);
+                return false;
             }
 
             _isInitializationStarted = true;

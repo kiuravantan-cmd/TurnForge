@@ -41,8 +41,7 @@ namespace TF.Battle.Factories
         /// </summary>
         private static bool CanCreateCombatant(BattleCombatantDataRecord data)
         {
-            return data != null
-                   && data.MaxHp > 0
+            return data is { MaxHp: > 0 }
                    && data.MaxEnergy >= 0
                    && data.InitialEnergy >= 0
                    && data.InitialEnergy <= data.MaxEnergy;
