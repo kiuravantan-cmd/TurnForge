@@ -5,10 +5,12 @@ using Cysharp.Threading.Tasks;
 using TF.Battle;
 using TF.Battle.Factories;
 using TF.Battle.Flow;
-using TF.Battle.Models;
+using TF.Battle.Preparation;
 using TF.Battle.Rules;
+using TF.GameFlow;
 using TF.MasterData;
 using TF.Infrastructure.Updating;
+using TF.UI.GameFlow;
 
 namespace TF.Composition
 {
@@ -27,8 +29,12 @@ namespace TF.Composition
         /// <summary>
         ///  Unityの更新イベントの受け取り口
         /// </summary>
-        [SerializeField]
-        private GameLoopRunner _runner;
+        [SerializeField] private GameLoopRunner _runner;
+
+        /// <summary>
+        /// ゲーム全体の画面切り替え
+        /// </summary>
+        [SerializeField] private GameScreenView _gameScreenView;
 
         /// <summary>
         /// 1人目に使用する参加者マスタのID
@@ -65,6 +71,31 @@ namespace TF.Composition
         /// </summary>
         private bool _isReleased = false;
 
+        /// <summary>
+        /// ーム全体の進行管理
+        /// </summary>
+        private GameFlowController _gameFlow;
+        
+        /// <summary>
+        /// 戦闘開始前の準備管理
+        /// </summary>
+        private BattleLoadingController _battleLoading;
+        
+        /// <summary>
+        /// 戦闘開始処理が進行中か
+        /// </summary>
+        private bool _isStartingBattle = false;
+
+        /// <summary>
+        /// ゲーム状態を画面へ反映するPresenter
+        /// </summary>
+        private GameScreenPresenter _gameScreenPresenter;
+        
+        /// <summary>
+        /// 現在のゲーム全体の状態
+        /// </summary>
+        public GameState CurrentState => _gameFlow?.CurrentState ?? GameState.Inactive;
+
         private void Awake()
         {
             // 更新基盤とゲームの依存関係を初期化
@@ -98,14 +129,44 @@ namespace TF.Composition
             {
                 return;
             }
+
+            _gameFlow = new GameFlowController();
+
+            if (_gameScreenView == null)
+            {
+                Debug.LogError("GameScreenViewが設定されていません。", this);
+                Release();
+                enabled = false;
+                return;
+            }
+
+            _gameScreenPresenter = new GameScreenPresenter(_gameFlow, _gameScreenView);
+
+            if (!_gameScreenPresenter.TryInitialize())
+            {
+                Debug.LogError("GameScreenPresenterを初期化できませんでした。", this);
+                Release();
+                enabled = false;
+                return;
+            }
+
+            // オフライン用の準備処理を接続
+            var preparation = new OfflineBattlePreparation();
             
-            InitializeBattleAsync().Forget();
+            _battleLoading = new BattleLoadingController(_gameFlow, preparation);
+            
+            InitializeGameAsync().Forget();
         }
 
-        private async UniTaskVoid InitializeBattleAsync()
+        private async UniTaskVoid InitializeGameAsync()
         {
+            if (!_gameFlow.TryBeginStartup())
+            {
+                return;
+            }
+            
             // マスタ読み込みと戦闘生成の結果
-            bool succeeded = await ComposeAsync();
+            bool succeeded = await LoadMasterDataAsync();
             
             // 待機中に破棄された場合は、そのまま終了する
             if (_isReleased)
@@ -115,19 +176,18 @@ namespace TF.Composition
 
             if (!succeeded)
             {
-                Debug.LogError("戦闘を初期化できませんでした。", this);
-                Release();
-                enabled = false;
+                Debug.LogError("マスタを初期化できませんでした。", this);
+                _gameFlow.TryFailStartup();
                 return;
             }
             
-            Debug.Log("戦闘の初期化が完了しました。", this);
+            _gameFlow.TryCompleteStartup();
         }
-
+        
         /// <summary>
-        /// マスタを読み込み、戦闘に必要なクラスを生成して接続
+        /// 使用するマスタを登録し、読み込み完了まで待機
         /// </summary>
-        private async UniTask<bool> ComposeAsync()
+        private async UniTask<bool> LoadMasterDataAsync()
         {
             MasterDataAccessor accessor = MasterDataAccessor.Instance;
             if (accessor == null)
@@ -159,6 +219,22 @@ namespace TF.Composition
                 return false;
             }
 
+            return true;
+
+            
+        }
+
+        /// <summary>
+        /// 読み込み済みマスタから、1戦分のオブジェクトを生成する。
+        /// </summary>
+        private bool TryComposeBattle()
+        {
+            MasterDataAccessor accessor = MasterDataAccessor.Instance;
+            if (accessor == null || !accessor.IsInitialized)
+            {
+                return false;
+            }
+            
             if (!accessor.TryGetById(_firstCombatantId, out BattleCombatantDataRecord firstCombatant))
             {
                 Debug.LogError($"参加者マスタがありません：ID {_firstCombatantId}", this);
@@ -197,6 +273,95 @@ namespace TF.Composition
         }
 
         /// <summary>
+        /// タイトルまたは結果画面から、準備を経由して戦闘を開始
+        /// </summary>
+        public async UniTask<bool> TryStartBattleAsync()
+        {
+            if (_isReleased || _isStartingBattle || _gameFlow == null || _battleLoading == null)
+            {
+                return false;
+            }
+
+            switch (CurrentState)
+            {
+                case GameState.Title:
+                case GameState.Result:
+                    break;
+
+                case GameState.Inactive:
+                case GameState.Loading:
+                case GameState.Battle:
+                case GameState.BattleLoading:
+                case GameState.Error:
+                default:
+                    return false;
+            }
+            
+            _isStartingBattle = true;
+            
+            // 前の戦闘の利用側を片付けてから、アセットを解放
+            ReleaseBattle();
+
+            if (!_battleLoading.ReleasePreparatedResources())
+            {
+                _isStartingBattle = false;
+                return false;
+            }
+
+            // ローディングへ移り、戦闘に必要な準備を待つ
+            bool isPrepared = await _battleLoading.TryPrepareAsync();
+
+            if (_isReleased || !isPrepared)
+            {
+                _isStartingBattle = false;
+                return false;
+            }
+
+            if (!TryComposeBattle())
+            {
+                ReleaseBattle();
+                _battleLoading.CancelPreparation();
+                _isStartingBattle = false;
+                return false;
+            }
+
+            if (!_battleLoading.TryEnterBattle())
+            {
+                ReleaseBattle();
+                _battleLoading.CancelPreparation();
+                _isStartingBattle = false;
+                return false;
+            }
+            
+            _isStartingBattle = false;
+            return true;
+        }
+        
+        /// <summary>
+        /// ローディング中の戦闘準備に中断を要求
+        /// </summary>
+        public void CancelBattlePreparation()
+        {
+            if (_isReleased)
+            {
+                return;
+            }
+
+            _battleLoading?.CancelPreparation();
+        }
+
+        /// <summary>
+        /// 1戦分の演出・購読・オブジェクトを片付ける
+        /// </summary>
+        private void ReleaseBattle()
+        {
+            // Presenter実装後、ここで演出停止と購読解除を行う
+
+            _battleFlow = null;
+            _battleModel = null;
+        }
+
+        /// <summary>
         /// 所有する更新基盤と登録を解放
         /// </summary>
         private void Release()
@@ -223,10 +388,15 @@ namespace TF.Composition
             
             _registrations.Clear();
             
-            // Presenterなどの購読解除を行う。
+            // 利用側を先に終了させてから、準備処理を破棄する。
+            ReleaseBattle();
 
-            _battleModel = null;
-            _battleFlow = null;
+            _battleLoading?.Dispose();
+            _battleLoading = null;
+
+            // 今後、画面Presenterの購読解除もここへ追加する。
+            _gameScreenPresenter?.Dispose();
+            _gameScreenPresenter = null;
             
             _scheduler?.Dispose();
             _scheduler = null;

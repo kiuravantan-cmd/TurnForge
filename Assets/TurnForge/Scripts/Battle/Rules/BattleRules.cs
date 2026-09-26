@@ -90,7 +90,7 @@ namespace TF.Battle.Rules
             long calculatedEnergy = (long)actor.Energy - commandData.EnergyCost + commandData.EnergyGain;
 
             // 最大エネルギーを超えないよう補正
-            int nextEnergy = (int)Mathf.Min(actor.MaxEnergy, calculatedEnergy);
+            int nextEnergy = (int)Mathf.Min((long)actor.MaxEnergy, calculatedEnergy);
             
             // 行動後の行動者の状態
             CombatantState nextActor = CopyCombatant(
