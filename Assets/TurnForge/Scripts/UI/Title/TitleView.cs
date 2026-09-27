@@ -18,7 +18,7 @@ namespace TF.UI.Title
         /// <summary>
         /// Presenterから指定された入力受付状態
         /// </summary>
-        private bool _isInputEnabled = true;
+        private bool _isInputEnabled = false;
 
         /// <summary>
         /// 新しい戦闘の開始が要求されたときに通知

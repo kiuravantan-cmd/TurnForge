@@ -1,17 +1,19 @@
-﻿using System;
+﻿using Cysharp.Threading.Tasks;
+using System;
 using System.Collections.Generic;
-using UnityEngine;
-using Cysharp.Threading.Tasks;
 using TF.Battle;
 using TF.Battle.Factories;
 using TF.Battle.Flow;
+using TF.Battle.Models;
 using TF.Battle.Preparation;
 using TF.Battle.Rules;
 using TF.GameFlow;
-using TF.MasterData;
 using TF.Infrastructure.Updating;
+using TF.MasterData;
+using TF.UI.Battle;
 using TF.UI.GameFlow;
 using TF.UI.Title;
+using UnityEngine;
 
 namespace TF.Composition
 {
@@ -41,6 +43,11 @@ namespace TF.Composition
         /// タイトル画面の操作受付
         /// </summary>
         [SerializeField] private TitleView _titleView;
+
+        /// <summary>
+        /// 戦闘画面の操作受付と表示
+        /// </summary>
+        [SerializeField] private BattleView _battleView;
 
         /// <summary>
         /// 1人目に使用する参加者マスタのID
@@ -101,6 +108,11 @@ namespace TF.Composition
         /// タイトル画面の操作受付と、戦闘開始処理を接続するPresenter
         /// </summary>
         private TitlePresenter _titlePresenter;
+
+        /// <summary>
+        /// 戦闘画面の操作受付・状態表示・結果演出を接続するPresenter
+        /// </summary>
+        private BattlePresenter _battlePresenter;
         
         /// <summary>
         /// 現在のゲーム全体の状態
@@ -174,6 +186,14 @@ namespace TF.Composition
             if (!_titlePresenter.TryInitialize())
             {
                 Debug.LogError("TitlePresenterを初期化できませんでした。", this);
+                Release();
+                enabled = false;
+                return;
+            }
+
+            if (_battleView == null)
+            {
+                Debug.LogError("BattleViewが設定されていません。", this);
                 Release();
                 enabled = false;
                 return;
@@ -296,7 +316,24 @@ namespace TF.Composition
             _battleModel = new BattleModel(rules, initialState);
             _battleFlow = new BattleFlowController(_battleModel);
 
-            return _battleFlow.TryStartBattle();
+            // Presenterの初期化の前に、行動受付状態へ進める
+            if (!_battleFlow.TryStartBattle())
+            {
+                Debug.LogError("戦闘の開始に失敗しました。", this);
+                return false;
+            }
+
+            // オフラインではFirstをプレイヤーの操作側にする
+            _battlePresenter = new BattlePresenter(_battleView, _battleModel, _battleFlow, BattleSide.First);
+            _battlePresenter.BattleFinished += HandleBattleFinised;
+
+            if (!_battlePresenter.TryInitialize())
+            {
+                Debug.LogError("BattlePresenterの初期化に失敗しました。", this);
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -382,10 +419,36 @@ namespace TF.Composition
         /// </summary>
         private void ReleaseBattle()
         {
-            // Presenter実装後、ここで演出停止と購読解除を行う
+            // 新しい画面操作を止める
+            if (_battleView != null)
+            {
+                _battleView.SetInputEnabled(false);
+            }
+
+            // モデルの参照を外す前に、演出の中断と購読解除を行う
+            if (_battlePresenter != null)
+            {
+                _battlePresenter.BattleFinished -= HandleBattleFinised;
+                _battlePresenter.Dispose();
+                _battlePresenter = null;
+            }
 
             _battleFlow = null;
             _battleModel = null;
+        }
+
+        /// <summary>
+        /// 最後の演出が完了したら、結果画面へ進む
+        /// </summary>
+        private void HandleBattleFinised(BattleState state)
+        {
+            if (_isReleased || state == null || !state.IsFinished || _gameFlow.CurrentState != GameState.Battle)
+            {
+                return;
+            }
+
+            // 後で、結果画面へ勝敗情報を渡す処理を追加
+            _gameFlow.TryShowResult();
         }
 
         /// <summary>

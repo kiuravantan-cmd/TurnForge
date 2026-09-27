@@ -1,5 +1,7 @@
-﻿using System.Threading;
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
+using System;
+using System.Threading;
+using Unity.VisualScripting.Antlr3.Runtime;
 
 namespace TF.Battle.Preparation
 {
@@ -11,18 +13,18 @@ namespace TF.Battle.Preparation
         /// <summary>
         /// ローディング画面の表示更新を挟み、開始可能か確認
         /// </summary>
-        public async UniTask<bool> PrepareAsync(CancellationToken cts)
+        public async UniTask<bool> PrepareAsync(CancellationToken token)
         {
-            if (cts.IsCancellationRequested)
+            if (token.IsCancellationRequested)
             {
                 return false;
             }
-            
+
             // 同フレーム内で戦闘画面まで切り替わることを避ける
-            await UniTask.NextFrame();
+            await UniTask.Delay(TimeSpan.FromSeconds(3), cancellationToken: token);
 
             // 待機中に中断された場合は、準備失敗として返す
-            if (cts.IsCancellationRequested)
+            if (token.IsCancellationRequested)
             {
                 return false;
             }

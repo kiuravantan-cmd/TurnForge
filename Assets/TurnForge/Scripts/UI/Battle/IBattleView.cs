@@ -3,6 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using TF.Battle.Commands;
 using TF.Battle.Models;
+using UnityEngine.Events;
 
 namespace TF.UI.Battle
 {
@@ -27,17 +28,17 @@ namespace TF.UI.Battle
         /// <summary>
         /// コマンドが選択された時に通知
         /// </summary>
-        event Action<BattleCommand> CommandSelected;
+        event UnityAction<BattleCommand> CommandSelected;
 
         /// <summary>
         /// 選択したコマンドの実行が要求されたときに通知
         /// </summary>
-        event Action ConfirmRequested;
+        event UnityAction ConfirmRequested;
         
         /// <summary>
         /// コマンド選択の取り消しが要求されたときに通知
         /// </summary>
-        event Action CancelRequested;
+        event UnityAction CancelRequested;
 
         /// <summary>
         /// HP・エネルギー・手番などを指定された状態で表示
@@ -58,6 +59,6 @@ namespace TF.UI.Battle
         /// <summary>
         /// 確定済みの行動結果を演出し、完了まで待機
         /// </summary>
-        UniTask PlayResultAsync(BattleResult result, CancellationTokenSource cts);
+        UniTask PlayResultAsync(BattleResult result, CancellationToken token);
     }
 }
