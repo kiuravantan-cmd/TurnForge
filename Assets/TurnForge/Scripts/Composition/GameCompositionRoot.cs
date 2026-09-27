@@ -13,6 +13,7 @@ using TF.Infrastructure.Updating;
 using TF.MasterData;
 using TF.UI.Battle;
 using TF.UI.GameFlow;
+using TF.UI.Result;
 using TF.UI.Title;
 using UnityEngine;
 
@@ -49,6 +50,11 @@ namespace TF.Composition
         /// 戦闘画面の操作受付と表示
         /// </summary>
         [SerializeField] private BattleView _battleView;
+
+        /// <summary>
+        /// 結果画面の操作受付と表示
+        /// </summary>
+        [SerializeField] private ResultView _resultView;
 
         /// <summary>
         /// 1人目に使用する参加者マスタのID
@@ -109,6 +115,11 @@ namespace TF.Composition
         /// タイトル画面の操作受付と、戦闘開始処理を接続するPresenter
         /// </summary>
         private TitlePresenter _titlePresenter;
+
+        /// <summary>
+        /// 戦闘結果の表示と再戦・タイトルへの遷移を接続
+        /// </summary>
+        private ResultPresenter _resultPresenter;
 
         /// <summary>
         /// 戦闘画面の操作受付・状態表示・結果演出を接続するPresenter
@@ -214,6 +225,29 @@ namespace TF.Composition
             var preparation = new OfflineBattlePreparation();
             
             _battleLoading = new BattleLoadingController(_gameFlow, preparation);
+
+            if (_resultView == null)
+            {
+                Debug.LogError("ResultViewが設定されていません。", this);
+                Release();
+                enabled = false;
+                return;
+            }
+
+            // 戦闘画面と同じFirstをプレイヤーの陣営として扱う
+            _resultPresenter = new ResultPresenter(
+                _resultView,
+                _gameFlow,
+                TryStartBattleAsync,
+                BattleSide.First);
+
+            if (!_resultPresenter.TryInitialize())
+            {
+                Debug.LogError("ResultPresenterを初期化できませんでした。", this);
+                Release();
+                enabled = false;
+                return;
+            }
             
             InitializeGameAsync().Forget();
         }
@@ -497,8 +531,17 @@ namespace TF.Composition
                 _battleCpu.SetEnabled(false);
             }
 
-            // 後で、結果画面へ勝敗情報を渡す処理を追加
-            _gameFlow.TryShowResult();
+            // 結果を設定してから画面を切り替える
+            if (_resultPresenter == null || !_resultPresenter.TrySetResult(state))
+            {
+                Debug.LogError("戦闘結果を設定できませんでした。", this);
+                return;
+            }
+
+            if (!_gameFlow.TryShowResult())
+            {
+                Debug.LogError("結果画面へ遷移できませんでした。", this);
+            }
         }
 
         /// <summary>
@@ -552,6 +595,8 @@ namespace TF.Composition
             _gameScreenPresenter = null;
             _titlePresenter?.Dispose();
             _titlePresenter = null;
+            _resultPresenter?.Dispose();
+            _resultPresenter = null;
 
             _scheduler?.Dispose();
             _scheduler = null;
