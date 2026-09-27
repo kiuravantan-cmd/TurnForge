@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using TF.Battle;
+using TF.Battle.AI;
 using TF.Battle.Factories;
 using TF.Battle.Flow;
 using TF.Battle.Models;
@@ -113,7 +114,17 @@ namespace TF.Composition
         /// 戦闘画面の操作受付・状態表示・結果演出を接続するPresenter
         /// </summary>
         private BattlePresenter _battlePresenter;
-        
+
+        /// <summary>
+        /// CPUの行動選択と実行要求を管理
+        /// </summary>
+        private BattleCpuController _battleCpu;
+
+        /// <summary>
+        /// 戦闘終了時にCPUの更新登録を解除するハンドル
+        /// </summary>
+        private IDisposable _cpuRegistration;
+
         /// <summary>
         /// 現在のゲーム全体の状態
         /// </summary>
@@ -269,8 +280,6 @@ namespace TF.Composition
             }
 
             return true;
-
-            
         }
 
         /// <summary>
@@ -330,6 +339,26 @@ namespace TF.Composition
             if (!_battlePresenter.TryInitialize())
             {
                 Debug.LogError("BattlePresenterの初期化に失敗しました。", this);
+                return false;
+            }
+
+            // CPUは通常攻撃を選択
+            IBattleCommandSelector selector = new AttackOnlyCommandSelector();
+
+            // プレイヤーと共通の行動実行・演出処理へ接続する
+            _battleCpu = new BattleCpuController(
+                _battleModel,
+                _battleFlow,
+                selector,
+                BattleSide.Second,
+                _battlePresenter.TryExecuteAsync);
+
+            _battleCpu.Failed += HandleCpuFailed;
+
+            // CPUの更新をゲームロジックの実行順で登録
+            if (!_scheduler.TryRegisterUpdate(_battleCpu, out _cpuRegistration, UpdateOrder.Simulation))
+            {
+                Debug.LogError("CPUの更新登録に失敗しました。", this);
                 return false;
             }
 
@@ -396,7 +425,10 @@ namespace TF.Composition
                 _isStartingBattle = false;
                 return false;
             }
-            
+
+            // 戦闘画面への遷移後に、CPUの行動を許可する
+            _battleCpu.SetEnabled(true);
+
             _isStartingBattle = false;
             return true;
         }
@@ -419,6 +451,18 @@ namespace TF.Composition
         /// </summary>
         private void ReleaseBattle()
         {
+            // CPUの更新登録を先に解除
+            _cpuRegistration?.Dispose();
+            _cpuRegistration = null;
+
+            // CPUの購読と参照を解放
+            if (_battleCpu != null)
+            {
+                _battleCpu.Failed -= HandleCpuFailed;
+                _battleCpu.Dispose();
+                _battleCpu = null;
+            }
+
             // 新しい画面操作を止める
             if (_battleView != null)
             {
@@ -447,8 +491,27 @@ namespace TF.Composition
                 return;
             }
 
+            // 結果画面ではCPUの行動を停止する
+            if (_battleCpu != null)
+            {
+                _battleCpu.SetEnabled(false);
+            }
+
             // 後で、結果画面へ勝敗情報を渡す処理を追加
             _gameFlow.TryShowResult();
+        }
+
+        /// <summary>
+        /// CPUが停止した原因を出力する
+        /// </summary>
+        private void HandleCpuFailed(string message)
+        {
+            if (_isReleased)
+            {
+                return;
+            }
+
+            Debug.LogError($"CPUの行動処理が停止しました：{message}", this);
         }
 
         /// <summary>

@@ -178,7 +178,7 @@ namespace TF.UI.Battle
             if (!_flow.TryExecute(request, out BattleResult result))
             {
                 _isExecuting = false;
-                _view.SetInputEnabled(true);
+                RefreshInput();
                 return false;
             }
 
