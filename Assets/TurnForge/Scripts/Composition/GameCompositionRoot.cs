@@ -11,6 +11,7 @@ using TF.GameFlow;
 using TF.MasterData;
 using TF.Infrastructure.Updating;
 using TF.UI.GameFlow;
+using TF.UI.Title;
 
 namespace TF.Composition
 {
@@ -35,6 +36,11 @@ namespace TF.Composition
         /// ゲーム全体の画面切り替え
         /// </summary>
         [SerializeField] private GameScreenView _gameScreenView;
+
+        /// <summary>
+        /// タイトル画面の操作受付
+        /// </summary>
+        [SerializeField] private TitleView _titleView;
 
         /// <summary>
         /// 1人目に使用する参加者マスタのID
@@ -90,6 +96,11 @@ namespace TF.Composition
         /// ゲーム状態を画面へ反映するPresenter
         /// </summary>
         private GameScreenPresenter _gameScreenPresenter;
+
+        /// <summary>
+        /// タイトル画面の操作受付と、戦闘開始処理を接続するPresenter
+        /// </summary>
+        private TitlePresenter _titlePresenter;
         
         /// <summary>
         /// 現在のゲーム全体の状態
@@ -145,6 +156,24 @@ namespace TF.Composition
             if (!_gameScreenPresenter.TryInitialize())
             {
                 Debug.LogError("GameScreenPresenterを初期化できませんでした。", this);
+                Release();
+                enabled = false;
+                return;
+            }
+
+            if (_titleView == null)
+            {
+                Debug.LogError("TitleViewが設定されていません。", this);
+                Release();
+                enabled = false;
+                return;
+            }
+
+            _titlePresenter = new TitlePresenter(_titleView, _gameFlow, TryStartBattleAsync);
+
+            if (!_titlePresenter.TryInitialize())
+            {
+                Debug.LogError("TitlePresenterを初期化できませんでした。", this);
                 Release();
                 enabled = false;
                 return;
@@ -266,8 +295,6 @@ namespace TF.Composition
             
             _battleModel = new BattleModel(rules, initialState);
             _battleFlow = new BattleFlowController(_battleModel);
-            
-            // ここにView・Presenterの生成と接続を追加する。
 
             return _battleFlow.TryStartBattle();
         }
@@ -397,7 +424,9 @@ namespace TF.Composition
             // 今後、画面Presenterの購読解除もここへ追加する。
             _gameScreenPresenter?.Dispose();
             _gameScreenPresenter = null;
-            
+            _titlePresenter?.Dispose();
+            _titlePresenter = null;
+
             _scheduler?.Dispose();
             _scheduler = null;
         }
