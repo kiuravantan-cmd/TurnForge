@@ -8,6 +8,7 @@ using TF.Battle.Models;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace TF.UI.Battle
@@ -16,7 +17,7 @@ namespace TF.UI.Battle
     /// 戦闘状態の表示と、コマンド操作の通知を担当
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class BattleView : MonoBehaviour, IBattleView
+    public sealed class BattleView : MonoBehaviour, IBattleView, ICancelHandler
     {
         /// <summary>
         /// 1人目のHP・エネルギー表示
@@ -254,6 +255,25 @@ namespace TF.UI.Battle
             {
                 CancelRequested?.Invoke();
             }
+        }
+
+        /// <summary>
+        /// キー・パッドの取消入力を、取消ボタンと共通の処理へ接続
+        /// </summary>
+        /// <param name="eventData">ボタンから渡された取消イベント</param>
+        public void OnCancel (BaseEventData eventData)
+        {
+            if (eventData == null
+                || eventData.used
+                || !isActiveAndEnabled
+                || !_isInputEnabled
+                || !_selectedCommand.HasValue)
+            {
+                return;
+            }
+
+            eventData.Use();
+            HandleCancel();
         }
 
         /// <summary>
