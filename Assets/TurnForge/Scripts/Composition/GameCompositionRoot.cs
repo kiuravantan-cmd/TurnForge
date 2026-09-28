@@ -12,6 +12,7 @@ using TF.GameFlow;
 using TF.Infrastructure.Updating;
 using TF.MasterData;
 using TF.UI.Battle;
+using TF.UI.Common;
 using TF.UI.GameFlow;
 using TF.UI.Result;
 using TF.UI.Title;
@@ -55,6 +56,13 @@ namespace TF.Composition
         /// 結果画面の操作受付と表示
         /// </summary>
         [SerializeField] private ResultView _resultView;
+
+        /// <summary>
+        /// 各画面のUI選択を管理するコンポーネント
+        /// </summary>
+        [SerializeField]
+        private UiSelectionController[] _uiSelectionControllers =
+             new UiSelectionController[0];
 
         /// <summary>
         /// 1人目に使用する参加者マスタのID
@@ -248,8 +256,48 @@ namespace TF.Composition
                 enabled = false;
                 return;
             }
-            
+
+            if (!TryRegisterUISelections())
+            {
+                Release();
+                enabled = false;
+                return;
+            }
+
             InitializeGameAsync().Forget();
+        }
+
+        /// <summary>
+        /// 各画面の選択管理を表示更新の順序で登録
+        /// </summary>
+        private bool TryRegisterUISelections()
+        {
+            if (_uiSelectionControllers == null || _uiSelectionControllers.Length == 0)
+            {
+                Debug.LogError("UI選択管理が設定されていません。", this);
+                return false;
+            }
+
+            foreach (UiSelectionController controller in _uiSelectionControllers)
+            {
+                if (controller == null)
+                {
+                    Debug.LogError("UI選択管理に未設定の要素があります。", this);
+                    return false;
+                }
+
+                // 戦闘処理や演出の更新後に、操作可能なUIを確認する
+                if (!_scheduler.TryRegisterUpdate(controller, out var registration, UpdateOrder.Input))
+                {
+                    Debug.LogError("UI選択管理の更新登録に失敗しました。", this);
+                    return false;
+                }
+
+                // ゲーム終了時にまとめて登録を解除
+                _registrations.Add(registration);
+            }
+
+            return true;
         }
 
         private async UniTaskVoid InitializeGameAsync()
