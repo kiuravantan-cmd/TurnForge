@@ -119,12 +119,18 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// 人間の手番で選択されたコマンドを保持する
+        /// プレイヤーの手番で選択されたコマンドを保持する
         /// </summary>
         private void HandleCommandSelected(BattleCommand command)
         {
-            if (!CanAcceptPlayerInput || !Enum.IsDefined(typeof(BattleCommand), command))
+            if (!CanAcceptPlayerInput)
             {
+                return;
+            }
+
+            if (!_model.CanExecute(_inputSide, command))
+            {
+                RefreshInput();
                 return;
             }
 
@@ -135,10 +141,17 @@ namespace TF.UI.Battle
         /// <summary>
         /// 選択中のコマンドを、現在のターンの要求として送る
         /// </summary>
-        private void HandleConfirmRequested ()
+        private void HandleConfirmRequested()
         {
             if (!CanAcceptPlayerInput || !_selectedCommand.HasValue)
             {
+                return;
+            }
+
+            // 選択後に状態が変化していた場合は表示を更新する
+            if (!_model.CanExecute(_inputSide, _selectedCommand.Value))
+            {
+                RefreshInput();
                 return;
             }
 
@@ -217,10 +230,32 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// 現在の手番と進行状態を入力受付へ反映
+        /// 現在の実行条件と手番に合わせて、選択状態と入力受付を更新す
         /// </summary>
         private void RefreshInput()
         {
+            if (_isDisposed || !_isInitialized)
+            {
+                return;
+            }
+
+            // 使用可否を更新している間は操作を受け付けない
+            _view.SetInputEnabled(false);
+
+            // 実行条件の判定はModelを通してルールへ委ねる
+            foreach (BattleCommand command in Enum.GetValues(typeof(BattleCommand)))
+            {
+                bool canExecute = _model.CanExecute(_inputSide, command);
+                _view.SetcommandEnabled(command, canExecute);
+            }
+
+            // 状態の変化で使用不可になったコマンドは選択を解除する
+            if (_selectedCommand.HasValue && !_model.CanExecute(_inputSide, _selectedCommand.Value))
+            {
+                _selectedCommand = null;
+                _view.SetSelectedCommand(null);
+            }
+
             _view.SetInputEnabled(CanAcceptPlayerInput);
         }
 

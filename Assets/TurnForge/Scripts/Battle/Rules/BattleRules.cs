@@ -66,6 +66,16 @@ namespace TF.Battle.Rules
             
             IsConfigured = true;
         }
+
+        /// <summary>
+        /// 状態を変更せず、行動要求が実行条件を満たすか
+        /// </summary>
+        /// <param name="state">判定対象の戦闘状態</param>
+        /// <param name="request">確認する行動要求</param>
+        public bool CanExecute(BattleState state, BattleActionRequest request)
+        {
+            return CanExecute(state, request, out _);
+        }
         
         /// <summary>
         /// 行動を処理
@@ -90,8 +100,9 @@ namespace TF.Battle.Rules
             long calculatedEnergy = (long)actor.Energy - commandData.EnergyCost + commandData.EnergyGain;
 
             // 最大エネルギーを超えないよう補正
-            int nextEnergy = (int)Mathf.Min((long)actor.MaxEnergy, calculatedEnergy);
-            
+            // long の値が浮動小数点へ変換されるため、整数で比較する Math.Minを使用
+            int nextEnergy = (int)Math.Min((long)actor.MaxEnergy, calculatedEnergy);
+
             // 行動後の行動者の状態
             CombatantState nextActor = CopyCombatant(
                 actor,

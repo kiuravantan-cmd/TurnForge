@@ -1,7 +1,6 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading;
 using TF.Battle.Commands;
 using TF.Battle.Models;
@@ -85,6 +84,11 @@ namespace TF.UI.Battle
         private BattleCommand? _selectedCommand;
 
         /// <summary>
+        /// Presenterから使用可能と通知されたコマンド
+        /// </summary>
+        private readonly HashSet<BattleCommand> _avaiableCommands = new HashSet<BattleCommand>();
+
+        /// <summary>
         /// コマンドが選択されたときに通知
         /// </summary>
         public event UnityAction<BattleCommand> CommandSelected;
@@ -149,6 +153,23 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
+        /// 指定したコマンドの使用可否を保持し、ボタンへ反映する
+        /// </summary>
+        /// <param name="command">対象のコマンド</param>
+        /// <param name="enabled">実行条件を満たしているか</param>
+        public void SetcommandEnabled(BattleCommand command, bool enabled)
+        {
+            if (enabled)
+            {
+                _avaiableCommands.Add(command);
+            }
+            else
+            {
+                _avaiableCommands.Remove(command);
+            }
+        }
+
+        /// <summary>
         /// Presenterが保持する選択を表示へ反映
         /// </summary>
         public void SetSelectedCommand(BattleCommand? command)
@@ -184,11 +205,14 @@ namespace TF.UI.Battle
             SetInteractable(_chargeButton, _isInputEnabled);
             SetInteractable(_specialButton, _isInputEnabled);
 
-            // 未選択の場合は決定・取消を受け付けない
-            bool canConfirm = _isInputEnabled && _selectedCommand.HasValue;
+            // 選択したコマンドが使用可能な場合だけ決定できる
+            bool canConfirm = _isInputEnabled && _selectedCommand.HasValue && _avaiableCommands.Contains(_selectedCommand.Value);
+
+            // 使用不可になったコマンドでも選択は取り消せる
+            bool canCancel = _isInputEnabled && _selectedCommand.HasValue;
 
             SetInteractable(_confirmButton, canConfirm);
-            SetInteractable(_cancelButton, canConfirm);
+            SetInteractable(_cancelButton, canCancel);
         }
 
         /// <summary>
@@ -229,7 +253,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void NotifySelection(BattleCommand command)
         {
-            if (isActiveAndEnabled && _isInputEnabled)
+            if (isActiveAndEnabled && _isInputEnabled && _avaiableCommands.Contains(command))
             {
                 CommandSelected?.Invoke(command);
             }
@@ -240,7 +264,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleConfirm()
         {
-            if (isActiveAndEnabled && _isInputEnabled && _selectedCommand.HasValue)
+            if (isActiveAndEnabled && _isInputEnabled && _selectedCommand.HasValue && _avaiableCommands.Contains(_selectedCommand.Value))
             {
                 ConfirmRequested?.Invoke();
             }

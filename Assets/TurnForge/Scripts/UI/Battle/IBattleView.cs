@@ -60,5 +60,12 @@ namespace TF.UI.Battle
         /// 確定済みの行動結果を演出し、完了まで待機
         /// </summary>
         UniTask PlayResultAsync(BattleResult result, CancellationToken token);
+
+        /// <summary>
+        /// 指定したコマンドの使用可否を表示へ反映する
+        /// </summary>
+        /// <param name="command">対象のコマンド</param>
+        /// <param name="enabled">実行条件を満たしているか</param>
+        void SetcommandEnabled(BattleCommand command, bool enabled);
     }
 }

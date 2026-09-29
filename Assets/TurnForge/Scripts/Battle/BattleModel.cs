@@ -39,6 +39,24 @@ namespace TF.Battle
             _currentState = initialState;
         }
 
+        /// <summary>
+        /// 現在の戦闘状態で、指定したコマンドの実行条件を満たすか
+        /// </summary>
+        /// <param name="actor">行動する陣営</param>
+        /// <param name="command">確認するコマンド</param>
+        public bool CanExecute(BattleSide actor, BattleCommand command)
+        {
+            if (_rules == null || _currentState == null)
+            {
+                return false;
+            }
+
+            // 現在のターン番号を使って確認用の要求を作成
+            var request = new BattleActionRequest(actor, _currentState.TurnNumber, command);
+
+            return _rules.CanExecute(_currentState, request);
+        }
+
         public bool TryExecute(BattleActionRequest request, out BattleResult result)
         {
             result = null;
