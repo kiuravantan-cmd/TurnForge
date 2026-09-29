@@ -55,11 +55,14 @@ namespace TF.UI.Battle
         /// nullの場合は選択を解除
         /// </summary>
         void SetSelectedCommand(BattleCommand? command);
-        
+
         /// <summary>
-        /// 確定済みの行動結果を演出し、完了まで待機
+        /// 確定済みの行動結果と表示文を反映し、演出完了まで待機する
         /// </summary>
-        UniTask PlayResultAsync(BattleResult result, CancellationToken token);
+        /// <param name="result">確定した行動結果</param>
+        /// <param name="message">Presenterが作成した表示文</param>
+        /// <param name="token">演出の中断通知</param>
+        UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token);
 
         /// <summary>
         /// 指定したコマンドの使用可否を表示へ反映する

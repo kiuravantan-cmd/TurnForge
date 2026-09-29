@@ -198,7 +198,11 @@ namespace TF.UI.Battle
             _selectedCommand = null;
             _view.SetSelectedCommand(null);
 
-            bool canceled = await _view.PlayResultAsync(result, _lifeTimeCts.Token).SuppressCancellationThrow();
+            // プレイヤーの陣営を基準に、確定した結果の表示文を作成する
+            string message = BattleResultFormatter.Format(result, _inputSide);
+
+            // 表示と演出が完了するまで、次の行動を受け付けない
+            bool canceled = await _view.PlayResultAsync(result, message, _lifeTimeCts.Token).SuppressCancellationThrow();
 
             _isExecuting = false;
 

@@ -184,14 +184,18 @@ namespace TF.UI.Battle
             RefreshButtons();
         }
 
-        public async UniTask PlayResultAsync(BattleResult result, CancellationToken token)
+        public async UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token)
         {
-            if (token.IsCancellationRequested || result == null)
+            if (token.IsCancellationRequested || result?.NextState == null)
             {
                 return;
             }
 
-            SetText(_resultText, $"{result.Request.Actor}:" + GetCommandName(result.Request.Command));
+            // 結果文と数値が一致するよう、行動後の状態を先に反映する
+            Render(result.NextState);
+
+            // 初期表示による結果文のクリア後に、今回の文章を設定する
+            SetText(_resultText, message ?? string.Empty);
 
             // 後でアニメーションなどの待機に置き換える
             await UniTask.Delay(TimeSpan.FromSeconds(1), cancellationToken: token);
