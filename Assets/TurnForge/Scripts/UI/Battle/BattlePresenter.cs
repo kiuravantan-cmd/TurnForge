@@ -246,7 +246,7 @@ namespace TF.UI.Battle
             foreach (BattleCommand command in Enum.GetValues(typeof(BattleCommand)))
             {
                 bool canExecute = _model.CanExecute(_inputSide, command);
-                _view.SetcommandEnabled(command, canExecute);
+                _view.SetCommandEnabled(command, canExecute);
             }
 
             // 状態の変化で使用不可になったコマンドは選択を解除する

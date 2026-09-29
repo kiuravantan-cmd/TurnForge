@@ -86,7 +86,7 @@ namespace TF.UI.Battle
         /// <summary>
         /// Presenterから使用可能と通知されたコマンド
         /// </summary>
-        private readonly HashSet<BattleCommand> _avaiableCommands = new HashSet<BattleCommand>();
+        private readonly HashSet<BattleCommand> _availableCommands = new HashSet<BattleCommand>();
 
         /// <summary>
         /// コマンドが選択されたときに通知
@@ -157,16 +157,18 @@ namespace TF.UI.Battle
         /// </summary>
         /// <param name="command">対象のコマンド</param>
         /// <param name="enabled">実行条件を満たしているか</param>
-        public void SetcommandEnabled(BattleCommand command, bool enabled)
+        public void SetCommandEnabled(BattleCommand command, bool enabled)
         {
             if (enabled)
             {
-                _avaiableCommands.Add(command);
+                _availableCommands.Add(command);
             }
             else
             {
-                _avaiableCommands.Remove(command);
+                _availableCommands.Remove(command);
             }
+
+            RefreshButtons();
         }
 
         /// <summary>
@@ -200,13 +202,13 @@ namespace TF.UI.Battle
         /// </summary>
         private void RefreshButtons()
         {
-            SetInteractable(_attackButton, _isInputEnabled);
-            SetInteractable(_guardButton, _isInputEnabled);
-            SetInteractable(_chargeButton, _isInputEnabled);
-            SetInteractable(_specialButton, _isInputEnabled);
+            SetInteractable(_attackButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Attack));
+            SetInteractable(_guardButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Guard));
+            SetInteractable(_chargeButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Charge));
+            SetInteractable(_specialButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Special));
 
             // 選択したコマンドが使用可能な場合だけ決定できる
-            bool canConfirm = _isInputEnabled && _selectedCommand.HasValue && _avaiableCommands.Contains(_selectedCommand.Value);
+            bool canConfirm = _isInputEnabled && _selectedCommand.HasValue && _availableCommands.Contains(_selectedCommand.Value);
 
             // 使用不可になったコマンドでも選択は取り消せる
             bool canCancel = _isInputEnabled && _selectedCommand.HasValue;
@@ -253,7 +255,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void NotifySelection(BattleCommand command)
         {
-            if (isActiveAndEnabled && _isInputEnabled && _avaiableCommands.Contains(command))
+            if (isActiveAndEnabled && _isInputEnabled && _availableCommands.Contains(command))
             {
                 CommandSelected?.Invoke(command);
             }
@@ -264,7 +266,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleConfirm()
         {
-            if (isActiveAndEnabled && _isInputEnabled && _selectedCommand.HasValue && _avaiableCommands.Contains(_selectedCommand.Value))
+            if (isActiveAndEnabled && _isInputEnabled && _selectedCommand.HasValue && _availableCommands.Contains(_selectedCommand.Value))
             {
                 ConfirmRequested?.Invoke();
             }

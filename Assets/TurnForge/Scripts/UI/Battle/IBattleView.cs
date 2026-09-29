@@ -66,6 +66,6 @@ namespace TF.UI.Battle
         /// </summary>
         /// <param name="command">対象のコマンド</param>
         /// <param name="enabled">実行条件を満たしているか</param>
-        void SetcommandEnabled(BattleCommand command, bool enabled);
+        void SetCommandEnabled(BattleCommand command, bool enabled);
     }
 }
