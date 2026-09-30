@@ -1,6 +1,4 @@
-﻿using Unity.VisualScripting;
-
-namespace TF.Infrastructure.Saving
+﻿namespace TF.Infrastructure.Saving
 {
     /// <summary>
     /// 保存先に依存しない、データの保存と読み込みを定義
