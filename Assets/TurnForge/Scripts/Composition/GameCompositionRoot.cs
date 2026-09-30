@@ -1,6 +1,8 @@
 ﻿using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
+using System.IO;
+using UnityEngine;
 using TF.Battle;
 using TF.Battle.AI;
 using TF.Battle.Factories;
@@ -8,7 +10,9 @@ using TF.Battle.Flow;
 using TF.Battle.Models;
 using TF.Battle.Preparation;
 using TF.Battle.Rules;
+using TF.Battle.Saving;
 using TF.GameFlow;
+using TF.Infrastructure.Saving;
 using TF.Infrastructure.Updating;
 using TF.MasterData;
 using TF.UI.Battle;
@@ -16,7 +20,6 @@ using TF.UI.Common;
 using TF.UI.GameFlow;
 using TF.UI.Result;
 using TF.UI.Title;
-using UnityEngine;
 
 namespace TF.Composition
 {
@@ -143,6 +146,11 @@ namespace TF.Composition
         /// 戦闘終了時にCPUの更新登録を解除するハンドル
         /// </summary>
         private IDisposable _cpuRegistration;
+
+        /// <summary>
+        /// 起動中の戦績と保存状態を管理
+        /// </summary>
+        private BattleRecordService _battleRecordService;
 
         /// <summary>
         /// 現在のゲーム全体の状態
@@ -306,7 +314,14 @@ namespace TF.Composition
             {
                 return;
             }
-            
+
+            // 戦績を読み込んでからゲームの準備を進める
+            if (!TryInitializeBattleRecord())
+            {
+                _gameFlow.TryFailStartup();
+                return;
+            }
+
             // マスタ読み込みと戦闘生成の結果
             bool succeeded = await LoadMasterDataAsync();
             
@@ -590,6 +605,24 @@ namespace TF.Composition
             {
                 Debug.LogError("結果画面へ遷移できませんでした。", this);
             }
+
+            // プレイヤー視点の結果を戦績へ加算する。
+            if (_battleRecordService != null)
+            {
+                if (_battleRecordService.TryRecordResult(state, BattleSide.First))
+                {
+                    // 加算した結果の確認用ログ。
+                    BattleRecordSaveData record = _battleRecordService.CurrentData;
+
+                    Debug.Log(
+                        $"戦績更新：{record.WinCount}勝 " +
+                        $"{record.LossCount}敗 {record.DrawCount}分",
+                        this);
+                }
+
+                // 前回の保存に失敗していた場合も再試行する。
+                SaveBattleRecordIfNeeded();
+            }
         }
 
         /// <summary>
@@ -651,10 +684,62 @@ namespace TF.Composition
         }
 
         /// <summary>
+        /// 保存先を組み立て、戦績を初期化
+        /// </summary>
+        private bool TryInitializeBattleRecord ()
+        {
+            // アプリ専用の永続データ領域に保存する。
+            string directoryPath = Path.Combine(Application.persistentDataPath, "Saves");
+
+            // ゲーム内容に依存しないJSON保存処理。
+            ISaveStorage storage = new JsonFileSaveStorage(directoryPath);
+
+            _battleRecordService = new BattleRecordService(storage);
+
+            if (!_battleRecordService.TryLoad())
+            {
+                Debug.LogError(
+                    "戦績を読み込めませんでした。既存データの上書きを防ぐため、起動を中止します。",
+                    this);
+
+                return false;
+            }
+
+            // 読み込み確認用のログ。
+            BattleRecordSaveData record = _battleRecordService.CurrentData;
+
+            Debug.Log(
+                $"戦績読込：{record.WinCount}勝 " +
+                $"{record.LossCount}敗 {record.DrawCount}分",
+                this);
+
+            return true;
+        }
+
+        /// <summary>
+        /// 未保存の戦績がある場合に保存を試みる
+        /// </summary>
+        private void SaveBattleRecordIfNeeded ()
+        {
+            if (_battleRecordService == null || !_battleRecordService.HasUnsavedChanges)
+            {
+                return;
+            }
+
+            if (!_battleRecordService.TrySave())
+            {
+                Debug.LogWarning(
+                    "戦績を保存できませんでした。変更はメモリに保持し、次の保存機会に再試行します。",
+                    this);
+            }
+        }
+
+        /// <summary>
         /// 破棄時に所有するリソースを解放
         /// </summary>
         private void OnDestroy()
         {
+            SaveBattleRecordIfNeeded();
             Release();
         }
     }   
