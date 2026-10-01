@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -184,21 +184,18 @@ namespace TF.UI.Battle
             RefreshButtons();
         }
 
-        public async UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token)
+        public UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token)
         {
-            if (token.IsCancellationRequested || result?.NextState == null)
+            if (!token.IsCancellationRequested && result?.NextState != null)
             {
-                return;
+                // 第1回の確認に必要な即時表示は講師基盤として提供する。
+                Render(result.NextState);
+                SetText(_resultText, message ?? string.Empty);
             }
 
-            // 結果文と数値が一致するよう、行動後の状態を先に反映する
-            Render(result.NextState);
-
-            // 初期表示による結果文のクリア後に、今回の文章を設定する
-            SetText(_resultText, message ?? string.Empty);
-
-            // 後でアニメーションなどの待機に置き換える
-            await UniTask.Delay(TimeSpan.FromSeconds(1), cancellationToken: token);
+            // TODO LESSON06-04: 演出の待機とキャンセルを追加する。
+            // 結果は確定済みのため、演出が中断されても戦闘状態を巻き戻さない。
+            return UniTask.CompletedTask;
         }
 
         /// <summary>
@@ -259,10 +256,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void NotifySelection(BattleCommand command)
         {
-            if (isActiveAndEnabled && _isInputEnabled && _availableCommands.Contains(command))
-            {
-                CommandSelected?.Invoke(command);
-            }
+            // TODO LESSON02-06: 有効な選択操作をCommandSelectedへ通知する。
         }
 
         /// <summary>
@@ -270,10 +264,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleConfirm()
         {
-            if (isActiveAndEnabled && _isInputEnabled && _selectedCommand.HasValue && _availableCommands.Contains(_selectedCommand.Value))
-            {
-                ConfirmRequested?.Invoke();
-            }
+            // TODO LESSON02-07: 有効な決定操作をConfirmRequestedへ通知する。
         }
 
         /// <summary>
@@ -281,10 +272,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleCancel()
         {
-            if (isActiveAndEnabled && _isInputEnabled && _selectedCommand.HasValue)
-            {
-                CancelRequested?.Invoke();
-            }
+            // TODO LESSON02-08: 有効な取消操作をCancelRequestedへ通知する。
         }
 
         /// <summary>
@@ -293,17 +281,8 @@ namespace TF.UI.Battle
         /// <param name="eventData">ボタンから渡された取消イベント</param>
         public void OnCancel (BaseEventData eventData)
         {
-            if (eventData == null
-                || eventData.used
-                || !isActiveAndEnabled
-                || !_isInputEnabled
-                || !_selectedCommand.HasValue)
-            {
-                return;
-            }
-
-            eventData.Use();
-            HandleCancel();
+            // TODO LESSON02-09: パッド・キーの取消をHandleCancelへ合流させる。
+            // 無効・処理済みのイベントを拒否し、有効なら消費する。
         }
 
         /// <summary>

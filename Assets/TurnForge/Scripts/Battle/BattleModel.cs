@@ -1,4 +1,4 @@
-﻿using TF.Battle.Commands;
+using TF.Battle.Commands;
 using TF.Battle.Models;
 using TF.Battle.Rules;
 using UnityEngine.Events;
@@ -60,22 +60,11 @@ namespace TF.Battle
         public bool TryExecute(BattleActionRequest request, out BattleResult result)
         {
             result = null;
-
-            if (_rules == null || _currentState == null)
-            {
-                return false;
-            }
-
-            if (!_rules.TryExecute(_currentState, request, out result))
-            {
-                return false;
-            }
-
-            // 通知先が最新の状態を参照できるように先に更新
-            _currentState = result.NextState;
-            
-            ActionResolved?.Invoke(result);
-            return true;
+            // TODO LESSON01-04: ルールへ処理を委ね、成功時だけ現在状態を置き換える。
+            // 現在状態を更新した後にActionResolvedで結果を通知する。
+            // 不成立の要求では現在状態を変更しない。
+            // TODO LESSON04-01: R3による状態通知へ移行し、購読の所有者と寿命を決める。
+            return false;
         }
     }
 }

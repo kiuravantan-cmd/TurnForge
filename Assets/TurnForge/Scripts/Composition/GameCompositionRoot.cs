@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -238,6 +238,8 @@ namespace TF.Composition
             }
 
             // オフライン用の準備処理を接続
+            // TODO LESSON07-01: オンライン用の準備処理を追加し、同一PCの2プロセスを接続する。
+            // TODO LESSON08-02: 切断通知と終了処理を接続する。
             var preparation = new OfflineBattlePreparation();
             
             _battleLoading = new BattleLoadingController(_gameFlow, preparation);
@@ -315,12 +317,8 @@ namespace TF.Composition
                 return;
             }
 
-            // 戦績を読み込んでからゲームの準備を進める
-            if (!TryInitializeBattleRecord())
-            {
-                _gameFlow.TryFailStartup();
-                return;
-            }
+            // TODO LESSON03-07: セーブ機能完成後、読み込みと失敗時の扱いを接続する。
+            // 配布時は保存を呼び出さず、タイトルへ進める。
 
             // マスタ読み込みと戦闘生成の結果
             bool succeeded = await LoadMasterDataAsync();
@@ -384,6 +382,8 @@ namespace TF.Composition
         /// </summary>
         private bool TryComposeBattle()
         {
+            // TODO LESSON05-02: この手動の組み立てをVContainerへ移行する。
+            // 戦闘単位の寿命と破棄順を保ち、CPUの実装を登録で差し替える。
             MasterDataAccessor accessor = MasterDataAccessor.Instance;
             if (accessor == null || !accessor.IsInitialized)
             {
@@ -606,23 +606,7 @@ namespace TF.Composition
                 Debug.LogError("結果画面へ遷移できませんでした。", this);
             }
 
-            // プレイヤー視点の結果を戦績へ加算する。
-            if (_battleRecordService != null)
-            {
-                if (_battleRecordService.TryRecordResult(state, BattleSide.First))
-                {
-                    // 加算した結果の確認用ログ。
-                    BattleRecordSaveData record = _battleRecordService.CurrentData;
-
-                    Debug.Log(
-                        $"戦績更新：{record.WinCount}勝 " +
-                        $"{record.LossCount}敗 {record.DrawCount}分",
-                        this);
-                }
-
-                // 前回の保存に失敗していた場合も再試行する。
-                SaveBattleRecordIfNeeded();
-            }
+            // TODO LESSON03-09: 戦績の加算と保存を接続する。重複加算を防ぐ。
         }
 
         /// <summary>
@@ -688,32 +672,10 @@ namespace TF.Composition
         /// </summary>
         private bool TryInitializeBattleRecord ()
         {
-            // アプリ専用の永続データ領域に保存する。
-            string directoryPath = Path.Combine(Application.persistentDataPath, "Saves");
-
-            // ゲーム内容に依存しないJSON保存処理。
-            ISaveStorage storage = new JsonFileSaveStorage(directoryPath);
-
-            _battleRecordService = new BattleRecordService(storage);
-
-            if (!_battleRecordService.TryLoad())
-            {
-                Debug.LogError(
-                    "戦績を読み込めませんでした。既存データの上書きを防ぐため、起動を中止します。",
-                    this);
-
-                return false;
-            }
-
-            // 読み込み確認用のログ。
-            BattleRecordSaveData record = _battleRecordService.CurrentData;
-
-            Debug.Log(
-                $"戦績読込：{record.WinCount}勝 " +
-                $"{record.LossCount}敗 {record.DrawCount}分",
-                this);
-
-            return true;
+            // TODO LESSON03-07: 保存先とServiceを組み立て、起動時の読み込みを接続する。
+            // 学生用の保存先は講師用と分ける（例：persistentDataPath/TurnForgeLessons）。
+            // 戦闘途中の状態・キャラクターID・操作設定の保存データも第3回で追加する。
+            return false;
         }
 
         /// <summary>
@@ -721,17 +683,29 @@ namespace TF.Composition
         /// </summary>
         private void SaveBattleRecordIfNeeded ()
         {
-            if (_battleRecordService == null || !_battleRecordService.HasUnsavedChanges)
+            // TODO LESSON03-08: 変更がある場合だけ保存し、失敗時は後で再試行する。
+            // 戦闘途中の保存はターン開始時に接続し、演出途中では保存しない。
+        }
+
+        /// <summary>
+        /// 第2回のUI接続前に、第1回の通常攻撃をゲーム本体で確認する。
+        /// </summary>
+        [ContextMenu("授業確認/第1回・プレイヤーの通常攻撃")]
+        private void ExecuteLessonAttack()
+        {
+            if (!Application.isPlaying || _isReleased
+                || CurrentState != GameState.Battle
+                || _battleModel?.CurrentState == null || _battlePresenter == null)
             {
+                Debug.Log("Playモードでタイトルから戦闘画面へ進んでください。", this);
                 return;
             }
 
-            if (!_battleRecordService.TrySave())
-            {
-                Debug.LogWarning(
-                    "戦績を保存できませんでした。変更はメモリに保持し、次の保存機会に再試行します。",
-                    this);
-            }
+            // CPUの手番や戦闘終了後の要求は、本体のルールで拒否する。
+            var request = new TF.Battle.Commands.BattleActionRequest(
+                BattleSide.First, _battleModel.CurrentState.TurnNumber,
+                TF.Battle.Commands.BattleCommand.Attack);
+            _battlePresenter.TryExecuteAsync(request).Forget();
         }
 
         /// <summary>
@@ -739,7 +713,7 @@ namespace TF.Composition
         /// </summary>
         private void OnDestroy()
         {
-            SaveBattleRecordIfNeeded();
+            // TODO LESSON03-10: 終了時の未保存データの再保存を接続する。
             Release();
         }
     }   

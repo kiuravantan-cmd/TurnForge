@@ -1,4 +1,4 @@
-﻿using Cysharp.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -70,11 +70,8 @@ namespace TF.UI.Battle
         /// <summary>
         /// プレイヤーからの操作を受け付けられるか
         /// </summary>
-        private bool CanAcceptPlayerInput => !_isDisposed
-                && _isInitialized
-                && !_isExecuting
-                && _flow.CanAcceptInput
-                && _model.CurrentState.ActionSide == _inputSide;
+        // TODO LESSON02-01: 初期化・破棄・実行中・入力受付・手番を判定する。
+        private bool CanAcceptPlayerInput => false;
 
         /// <summary>
         /// 表示・状態・進行管理・プレイヤーの操作側を受け取る
@@ -123,19 +120,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleCommandSelected(BattleCommand command)
         {
-            if (!CanAcceptPlayerInput)
-            {
-                return;
-            }
-
-            if (!_model.CanExecute(_inputSide, command))
-            {
-                RefreshInput();
-                return;
-            }
-
-            _selectedCommand = command;
-            _view.SetSelectedCommand(command);
+            // TODO LESSON02-02: 操作可否と技の実行条件を確認し、選択を保持してViewへ反映する。
         }
 
         /// <summary>
@@ -143,21 +128,8 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleConfirmRequested()
         {
-            if (!CanAcceptPlayerInput || !_selectedCommand.HasValue)
-            {
-                return;
-            }
-
-            // 選択後に状態が変化していた場合は表示を更新する
-            if (!_model.CanExecute(_inputSide, _selectedCommand.Value))
-            {
-                RefreshInput();
-                return;
-            }
-
-            // 決定した時点の手番情報を使って要求する
-            var request = new BattleActionRequest(_inputSide, _model.CurrentState.TurnNumber, _selectedCommand.Value);
-            TryExecuteAsync(request).Forget();
+            // TODO LESSON02-03: 選択済みの技を再検証し、現在のターン番号で要求を作る。
+            // パッド・キー・クリックともTryExecuteAsyncへ送る。
         }
 
         /// <summary>
@@ -165,13 +137,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleCancelRequested()
         {
-            if (!CanAcceptPlayerInput)
-            {
-                return;
-            }
-
-            _selectedCommand = null;
-            _view.SetSelectedCommand(null);
+            // TODO LESSON02-04: 操作可能な場合に選択を解除し、Viewへ反映する。
         }
 
         /// <summary>
@@ -243,24 +209,10 @@ namespace TF.UI.Battle
                 return;
             }
 
-            // 使用可否を更新している間は操作を受け付けない
+            // TODO LESSON02-05: コマンドごとの使用可否・選択解除・全体の操作可否を反映する。
+            // 配布時は未実装の操作が実行されないように全体を無効化する。
             _view.SetInputEnabled(false);
-
-            // 実行条件の判定はModelを通してルールへ委ねる
-            foreach (BattleCommand command in Enum.GetValues(typeof(BattleCommand)))
-            {
-                bool canExecute = _model.CanExecute(_inputSide, command);
-                _view.SetCommandEnabled(command, canExecute);
-            }
-
-            // 状態の変化で使用不可になったコマンドは選択を解除する
-            if (_selectedCommand.HasValue && !_model.CanExecute(_inputSide, _selectedCommand.Value))
-            {
-                _selectedCommand = null;
-                _view.SetSelectedCommand(null);
-            }
-
-            _view.SetInputEnabled(CanAcceptPlayerInput);
+            // TODO LESSON04-02: R3で操作可否の変化を購読し、再表示時の重複購読を防ぐ。
         }
 
         /// <summary>
@@ -268,6 +220,7 @@ namespace TF.UI.Battle
         /// </summary>
         public void Dispose()
         {
+            // TODO LESSON04-03: 追加したR3の購読も、この所有者の終了時に解放する。
             if (_isDisposed)
             {
                 return;

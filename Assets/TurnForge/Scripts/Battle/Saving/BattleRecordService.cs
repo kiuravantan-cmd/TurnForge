@@ -1,6 +1,3 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
 using TF.Battle.Models;
 using TF.Infrastructure.Saving;
 
@@ -59,39 +56,9 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TryLoad ()
         {
-            // 未保存の戦績を読み込みで失わないようにする
-            if (_storage == null || HasUnsavedChanges)
-            {
-                return false;
-            }
-
-            // 初期化済みの戦績を再読み込みで巻き戻さない。
-            if (IsInitialized)
-            {
-                return true;
-            }
-
-            if (!_storage.TryLoad<BattleRecordSaveData>(SaveKey, out var loadedData, out var status))
-            {
-                if (status != SaveLoadStatus.NotFound)
-                {
-                    return false;
-                }
-
-                // 初回起動では戦績0から開始する。
-                _currentData = new BattleRecordSaveData(0, 0, 0);
-                IsInitialized = true;
-                return true;
-            }
-
-            if (!IsValidData(loadedData))
-            {
-                return false;
-            }
-
-            _currentData = loadedData;
-            IsInitialized = true;
-            return true;
+            // TODO LESSON03-03: 未保存の場合だけ初期値を採用し、読み込み成功を検証する。
+            // 未保存の変更を読み込みで失わないこと。成功時のみIsInitializedを更新する。
+            return false;
         }
 
         /// <summary>
@@ -101,80 +68,9 @@ namespace TF.Battle.Saving
         /// <param name="playerSide">プレイヤーの陣営</param>
         public bool TryRecordResult(BattleState state, BattleSide playerSide)
         {
-            // 読み込みが完了するまで戦績を変更しない。
-            if (!IsInitialized)
-            {
-                return false;
-            }
-
-            if (state == null
-                || !state.IsFinished
-                || state.FirstCombatant == null
-                || state.SecondCombatant == null
-                || ReferenceEquals(state, _lastRecordedState))
-            {
-                return false;
-            }
-
-            if (playerSide != BattleSide.First
-                && playerSide != BattleSide.Second)
-            {
-                return false;
-            }
-
-            // プレイヤーと相手の終了時の状態
-            CombatantState player = playerSide == BattleSide.First
-                ? state.FirstCombatant
-                : state.SecondCombatant;
-
-            CombatantState opponent = playerSide == BattleSide.First
-                ? state.SecondCombatant
-                : state.FirstCombatant;
-
-            // 現在のルールでは戦闘不能によって決着する
-            if (!player.IsDefeated && !opponent.IsDefeated)
-            {
-                return false;
-            }
-
-            // 加算後の値を一時的に保持する
-            int winCount = _currentData.WinCount;
-            int lossCount = _currentData.LossCount;
-            int drawCount = _currentData.DrawCount;
-
-            if (player.IsDefeated && opponent.IsDefeated)
-            {
-                if (drawCount == int.MaxValue)
-                {
-                    return false;
-                }
-
-                drawCount++;
-            }
-            else if (player.IsDefeated)
-            {
-                if (lossCount == int.MaxValue)
-                {
-                    return false;
-                }
-
-                lossCount++;
-            }
-            else
-            {
-                if (winCount == int.MaxValue)
-                {
-                    return false;
-                }
-
-                winCount++;
-            }
-
-            // 新しいデータへ置き換え、未保存として保持する
-            _currentData = new BattleRecordSaveData(winCount, lossCount, drawCount);
-            _lastRecordedState = state;
-            HasUnsavedChanges = true;
-            return true;
+            // TODO LESSON03-04: 初期化・終了状態・陣営・重複・桁あふれを検証する。
+            // プレイヤー視点で戦績を加算し、HasUnsavedChangesを立てる。
+            return false;
         }
 
         /// <summary>
@@ -182,24 +78,9 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TrySave()
         {
-            if (_storage == null || !IsInitialized || !IsValidData(_currentData))
-            {
-                return false;
-            }
-
-            // 変更がなければ書き込みは不要。
-            if (!HasUnsavedChanges)
-            {
-                return true;
-            }
-
-            if (!_storage.TrySave(SaveKey, _currentData))
-            {
-                return false;
-            }
-
-            HasUnsavedChanges = false;
-            return true;
+            // TODO LESSON03-05: 有効な初期化済みデータだけ保存する。
+            // 保存成功時のみHasUnsavedChangesを解除し、失敗時は保持する。
+            return false;
         }
 
         /// <summary>
@@ -207,11 +88,8 @@ namespace TF.Battle.Saving
         /// </summary>
         private static bool IsValidData(BattleRecordSaveData data)
         {
-            return data != null
-                && data.Version == BattleRecordSaveData.CurrentVersion
-                && data.WinCount >= 0
-                && data.LossCount >= 0
-                && data.DrawCount >= 0;
+            // TODO LESSON03-06: null・保存形式の版番号・負の戦績を検証する。
+            return false;
         }
     }
 }

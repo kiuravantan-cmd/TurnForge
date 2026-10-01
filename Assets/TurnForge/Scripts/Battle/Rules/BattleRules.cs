@@ -1,9 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using TF.Battle.Commands;
 using TF.Battle.Models;
 using TF.MasterData;
-using UnityEngine;
 
 namespace TF.Battle.Rules
 {
@@ -84,85 +83,13 @@ namespace TF.Battle.Rules
         public bool TryExecute(BattleState currentState, BattleActionRequest request, out BattleResult result)
         {
             result = null;
-
-            if (!CanExecute(currentState, request, out var commandData))
-            {
-                return false;
-            }
-            
-            // 行動する側の状態
-            CombatantState actor = GetCombatant(currentState, request.Actor);
-
-            // 行動を受ける側の状態
-            CombatantState target = GetCombatant(currentState, GetOpponentSide(request.Actor));
-            
-            // 消費後に回復を適用する。加算時のオーバーフローを防ぐためlongで計算
-            long calculatedEnergy = (long)actor.Energy - commandData.EnergyCost + commandData.EnergyGain;
-
-            // 最大エネルギーを超えないよう補正
-            // long の値が浮動小数点へ変換されるため、整数で比較する Math.Minを使用
-            int nextEnergy = (int)Math.Min((long)actor.MaxEnergy, calculatedEnergy);
-
-            // 行動後の行動者の状態
-            CombatantState nextActor = CopyCombatant(
-                actor,
-                actor.Hp,
-                nextEnergy,
-                request.Command == BattleCommand.Guard);
-            
-            // 行動後の相手の状態
-            CombatantState nextTarget = target;
-            
-            // 防御中の被ダメージに使用する除数
-            int guardDamageDivisor = _commandData[BattleCommand.Guard].GuardDamageDivisor;
-
-            switch (request.Command)
-            {
-                case BattleCommand.Attack:
-                case BattleCommand.Special:
-                    nextTarget = ApplyDamage(target, commandData.Damage, guardDamageDivisor);
-                    break;
-                
-                case BattleCommand.Guard:
-                case BattleCommand.Charge:
-                    // 防御とエネルギーの変更はnextActorの生成時に適用済み
-                    break;
-                
-                default:
-                    Debug.LogWarning($"指定されていないコマンドです。{request.Command}");
-                    return false;
-            }
-
-            // 今回の行動で勝敗が決まったか
-            bool isFinished = nextTarget.IsDefeated;
-
-            // 決着時は現在の手番とターン番号を維持
-            BattleSide nextActionSide = currentState.ActionSide;
-            int nextTurnNumber = currentState.TurnNumber;
-
-            if (!isFinished)
-            {
-                // ターン番号の加算によるオーバーフローを防ぐ
-                if (nextTurnNumber == int.MaxValue)
-                {
-                    Debug.LogWarning("ターン番号を加算するとオーバーフローになります。");
-                    return false;
-                }
-
-                nextActionSide = target.Side;
-                nextTurnNumber++;
-                
-                // 次の行動者はターン開始時に防御が解除
-                nextTarget = CopyCombatant(nextTarget, nextTarget.Hp, nextTarget.Energy, false);
-            }
-            
-            // 参加者の並びをFirst、Secondに戻した次の戦闘状態
-            CombatantState nextFirst = request.Actor == BattleSide.First ? nextActor : nextTarget;
-            CombatantState nextSecond = request.Actor == BattleSide.Second ? nextActor : nextTarget;
-            BattleState nextState = new BattleState(nextFirst, nextSecond, nextActionSide, nextTurnNumber, isFinished);
-
-            result = new BattleResult(request, currentState, nextState);
-            return true;
+            // TODO LESSON01-03: CanExecuteで要求を確認し、行動者と相手を取得する。
+            // 通常攻撃のマスタ値とApplyDamageを使って、攻撃後の状態を作る。
+            // HP0なら終了。継続時だけ手番を交代し、ターン番号を1進める。
+            // First/Secondの順でBattleStateを作り、前後の状態をBattleResultへ渡す。
+            // TODO LESSON06-01: 防御・チャージ・必殺技、コストとエネルギー上限を追加する。
+            // 防御は次の自分の手番開始時に解除する。計算値の桁あふれにも対応する。
+            return false;
         }
 
         /// <summary>
@@ -174,50 +101,13 @@ namespace TF.Battle.Rules
             out BattleCommandDataRecord commandData)
         {
             commandData = null;
-            
-            if (!IsConfigured || state == null || request == null)
-            {
-                return false;
-            }
-
-            if (state.IsFinished || state.TurnNumber < 1)
-            {
-                return false;
-            }
-
-            if (!IsValidCombatant(state.FirstCombatant, BattleSide.First) ||
-                !IsValidCombatant(state.SecondCombatant, BattleSide.Second))
-            {
-                return false;
-            }
-
-            if (state.ActionSide != BattleSide.First && state.ActionSide != BattleSide.Second)
-            {
-                return false;
-            }
-
-            if (request.Actor != state.ActionSide ||
-                request.TurnNumber != state.TurnNumber)
-            {
-                return false;
-            }
-
-            if (!_commandData.TryGetValue(request.Command, out commandData))
-            {
-                return false;
-            }
-            
-            // 現在の手番
-            CombatantState actor = GetCombatant(state, request.Actor);
-
-            // 自分のターン開始時には防御が解除されている必要がある
-            if (actor.IsGuarding || actor.Energy < commandData.EnergyCost)
-            {
-                return false;
-            }
-            
-            // チャージはエネルギーが最大の場合に使用できない
-            return request.Command != BattleCommand.Charge || actor.Energy < actor.MaxEnergy;
+            // TODO LESSON01-02: 未設定・終了済み・不正な参加者・手番違いを拒否する。
+            // _commandDataから要求されたコマンドのマスタを取得する。
+            // 第1回はAttackだけ許可する。他の技は第6回まで拒否する。
+            // TODO LESSON06-02: 技のコスト不足・チャージ上限を検証する。
+            // TODO LESSON08-01: オンラインでもホスト側でこの判定を通す。
+            // 現在のターン番号と要求の番号を照合し、古い要求・二重要求を拒否する。
+            return false;
         }
 
         /// <summary>
@@ -256,13 +146,10 @@ namespace TF.Battle.Rules
         /// </summary>
         private static CombatantState ApplyDamage(CombatantState target, int damage, int guardDamageDivisor)
         {
-            // 防御中は半減し、整数除算で端数を切り捨てる
-            int actualDamage = target.IsGuarding ? damage / guardDamageDivisor : damage;
-            
-            // HPが0未満にならないよう補正
-            int nextHp = Mathf.Max(0, target.Hp - actualDamage);
-
-            return CopyCombatant(target, nextHp, target.Energy, target.IsGuarding);
+            // TODO LESSON01-01B: マスタのdamageをHPから引き、下限を0にする。
+            // CopyCombatantでHP以外を引き継いだ新しい状態を返す。
+            // TODO LESSON06-03: 防御中はguardDamageDivisorで整数除算してから適用する。
+            return target;
         }
 
         /// <summary>
@@ -270,7 +157,9 @@ namespace TF.Battle.Rules
         /// </summary>
         private static CombatantState CopyCombatant(CombatantState source, int hp, int energy, bool isGuarding)
         {
-            return new CombatantState(source.Side, hp, source.MaxHp, energy, source.MaxEnergy, isGuarding);
+            // TODO LESSON01-01A: sourceのSide・MaxHp・MaxEnergyを引き継ぐ。
+            // hp・energy・isGuardingは引数の値を使い、新しいCombatantStateを返す。
+            return source;
         }
     }
 }
