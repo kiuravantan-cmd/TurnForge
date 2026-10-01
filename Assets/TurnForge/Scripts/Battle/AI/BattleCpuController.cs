@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Cysharp.Threading.Tasks;
 using TF.Battle.Commands;
 using TF.Battle.Flow;
@@ -9,12 +9,12 @@ using UnityEngine.Events;
 namespace TF.Battle.AI
 {
     /// <summary>
-    /// CPUの手番でコマンドを選び、行動実行を要求する
+    /// CPUの番でコマンドを選び、行動実行を指示する
     /// </summary>
     public sealed class BattleCpuController : IUpdateTickable, IDisposable
     {
         /// <summary>
-        /// 現在の戦闘状態を保持するモデル
+        /// 現在のHPや行動する番を覚えておくモデル
         /// </summary>
         private readonly BattleModel _model;
 
@@ -49,7 +49,7 @@ namespace TF.Battle.AI
         private bool _isDisposed;
 
         /// <summary>
-        /// CPUの手番確認を有効にするかどうか。戦闘画面への遷移後に有効化する
+        /// CPUの番かどうかの確認を有効にするかどうか。戦闘画面への遷移後に有効化する
         /// </summary>
         public bool IsEnabled { get; private set; }
 
@@ -76,7 +76,7 @@ namespace TF.Battle.AI
         }
 
         /// <summary>
-        /// CPUの手番で、演出中でなければ行動を開始する
+        /// CPUの番で、演出中でなければ行動を開始する
         /// </summary>
         public void Tick(UpdateContext context)
         {
@@ -118,7 +118,7 @@ namespace TF.Battle.AI
                 return;
             }
 
-            // 選択した時点のターン番号を要求へ含める
+            // 選択した時点のターン番号を指示へ含める
             var request = new BattleActionRequest(_cpuSide, state.TurnNumber, command);
 
             // 非同期処理を開始する前に、二重実行を防止
@@ -148,7 +148,7 @@ namespace TF.Battle.AI
         }
 
         /// <summary>
-        /// 無効な要求を毎フレーム繰り返さないように停止する
+        /// 実行できない指示を毎フレーム繰り返さないように停止する
         /// </summary>
         private void StopWithFailure(string message)
         {
@@ -158,7 +158,7 @@ namespace TF.Battle.AI
         }
 
         /// <summary>
-        /// CPUの手番確認を有効化または無効化する
+        /// CPUの番かどうかの確認を有効化または無効化する
         /// </summary>
         public void SetEnabled(bool isEnabled)
         {
@@ -166,7 +166,7 @@ namespace TF.Battle.AI
         }
 
         /// <summary>
-        /// 新しい行動要求を停止し、通知先への参照を解除する
+        /// 新しい行動の指示を停止し、通知先への参照を解除する
         /// </summary>
         public void Dispose()
         {

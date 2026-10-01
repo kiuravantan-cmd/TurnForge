@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using TF.Infrastructure.Updating;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -39,7 +39,7 @@ namespace TF.UI.Common
             // 現在フォーカスされているオブジェクト
             GameObject selectedObject = eventSystem.currentSelectedGameObject;
 
-            // この画面の有効な選択は維持する
+            // この画面の有効な選択はそのままにする
             if (TryGetRegisterdSelectable(selectedObject, out var selected) && CanSelect(selected))
             {
                 return;

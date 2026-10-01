@@ -1,4 +1,4 @@
-﻿using UnityEngine.Events;
+using UnityEngine.Events;
 
 namespace TF.UI.Title
 {
@@ -8,7 +8,7 @@ namespace TF.UI.Title
     public interface ITitleView
     {
         /// <summary>
-        /// 新しい戦闘の開始が要求されたときに通知
+        /// 新しい戦闘の開始が指示されたときに通知
         /// </summary>
         event UnityAction StartRequested;
         

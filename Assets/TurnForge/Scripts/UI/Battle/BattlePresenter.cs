@@ -70,7 +70,7 @@ namespace TF.UI.Battle
         /// <summary>
         /// プレイヤーからの操作を受け付けられるか
         /// </summary>
-        // TODO LESSON02-01: 初期化・破棄・実行中・入力受付・手番を判定する。
+        // TODO LESSON02-01: 初期化・破棄・実行中・入力受付・行動する番を判定する。
         private bool CanAcceptPlayerInput => false;
 
         /// <summary>
@@ -116,19 +116,19 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// プレイヤーの手番で選択されたコマンドを保持する
+        /// プレイヤーの番で選択されたコマンドを保持する
         /// </summary>
         private void HandleCommandSelected(BattleCommand command)
         {
-            // TODO LESSON02-02: 操作可否と技の実行条件を確認し、選択を保持してViewへ反映する。
+            // TODO LESSON02-02: 操作できるかどうかと技の実行条件を確認し、選択を保持してViewの表示を更新する。
         }
 
         /// <summary>
-        /// 選択中のコマンドを、現在のターンの要求として送る
+        /// 選択中のコマンドを、現在のターンの指示として送る
         /// </summary>
         private void HandleConfirmRequested()
         {
-            // TODO LESSON02-03: 選択済みの技を再検証し、現在のターン番号で要求を作る。
+            // TODO LESSON02-03: 選択済みの技を再確認し、現在のターン番号で指示を作る。
             // パッド・キー・クリックともTryExecuteAsyncへ送る。
         }
 
@@ -137,7 +137,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleCancelRequested()
         {
-            // TODO LESSON02-04: 操作可能な場合に選択を解除し、Viewへ反映する。
+            // TODO LESSON02-04: 操作可能な場合に選択を解除し、Viewの表示を更新する。
         }
 
         /// <summary>
@@ -153,7 +153,7 @@ namespace TF.UI.Battle
             _isExecuting = true;
             _view.SetInputEnabled(false);
 
-            // 無効な要求では演出を開始しない
+            // 実行できない指示では演出を開始しない
             if (!_flow.TryExecute(request, out BattleResult result))
             {
                 _isExecuting = false;
@@ -200,7 +200,7 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// 現在の実行条件と手番に合わせて、選択状態と入力受付を更新す
+        /// 現在の実行条件と行動する番に合わせて、選択内容と操作できるかどうかを更新する
         /// </summary>
         private void RefreshInput()
         {
@@ -209,14 +209,14 @@ namespace TF.UI.Battle
                 return;
             }
 
-            // TODO LESSON02-05: コマンドごとの使用可否・選択解除・全体の操作可否を反映する。
+            // TODO LESSON02-05: 各技が使えるか確かめ、選択内容とボタンの操作を更新する。
             // 配布時は未実装の操作が実行されないように全体を無効化する。
             _view.SetInputEnabled(false);
-            // TODO LESSON04-02: R3で操作可否の変化を購読し、再表示時の重複購読を防ぐ。
+            // TODO LESSON04-02: R3で操作できるかどうかの変化を購読し、再表示時の重複購読を防ぐ。
         }
 
         /// <summary>
-        /// 操作の購読を解除し、実行中の演出に中断を要求
+        /// 操作の購読を解除し、実行中の演出に中断を指示
         /// </summary>
         public void Dispose()
         {

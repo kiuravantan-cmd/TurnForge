@@ -1,15 +1,15 @@
-﻿using TF.Battle.Models;
+using TF.Battle.Models;
 using TF.MasterData;
 
 namespace TF.Battle.Factories
 {
     /// <summary>
-    /// 新しい戦闘の初期状態を生成
+    /// 新しい戦闘の初期状態を作成
     /// </summary>
     public sealed class BattleStateFactory
     {
         /// <summary>
-        /// 双方のマスタから、Firstが先攻の初期状態を生成
+        /// 双方のマスタから、Firstが先攻の初期状態を作成
         /// </summary>
         public bool TryCreateInitialState(
             BattleCombatantDataRecord firstData,
@@ -48,7 +48,7 @@ namespace TF.Battle.Factories
         }
 
         /// <summary>
-        /// マスタの値をコピーし、参加者の初期状態を生成
+        /// マスタの値をコピーし、キャラクターの初期状態を作成
         /// </summary>
         private static CombatantState CreateCombatant(BattleCombatantDataRecord data, BattleSide side)
         {

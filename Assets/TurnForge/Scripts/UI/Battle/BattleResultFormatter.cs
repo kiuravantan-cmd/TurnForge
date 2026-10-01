@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using TF.Battle.Commands;
 using TF.Battle.Models;
 
@@ -61,7 +61,7 @@ namespace TF.UI.Battle
             string actorName = actorSide == playerSide ? "あなた" : "相手";
             string targetName = actorSide == playerSide ? "相手" : "あなた";
 
-            // 生成する表示文
+            // 作る表示文
             var message = new StringBuilder();
 
             switch (result.Request.Command)

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using TF.Battle.Commands;
@@ -31,17 +31,17 @@ namespace TF.UI.Battle
         event UnityAction<BattleCommand> CommandSelected;
 
         /// <summary>
-        /// 選択したコマンドの実行が要求されたときに通知
+        /// 選択したコマンドの実行が指示されたときに通知
         /// </summary>
         event UnityAction ConfirmRequested;
         
         /// <summary>
-        /// コマンド選択の取り消しが要求されたときに通知
+        /// コマンド選択の取り消しが指示されたときに通知
         /// </summary>
         event UnityAction CancelRequested;
 
         /// <summary>
-        /// HP・エネルギー・手番などを指定された状態で表示
+        /// HP・エネルギー・行動する番などを指定された状態で表示
         /// </summary>
         void Render(BattleState state);
         
@@ -65,7 +65,7 @@ namespace TF.UI.Battle
         UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token);
 
         /// <summary>
-        /// 指定したコマンドの使用可否を表示へ反映する
+        /// 指定した技が使えるかどうかを画面に表示する
         /// </summary>
         /// <param name="command">対象のコマンド</param>
         /// <param name="enabled">実行条件を満たしているか</param>

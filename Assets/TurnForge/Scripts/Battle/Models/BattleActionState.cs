@@ -1,4 +1,4 @@
-﻿namespace TF.Battle.Models
+namespace TF.Battle.Models
 {
     /// <summary>
     /// 戦闘の入力受付と行動処理の進行段階
@@ -7,10 +7,10 @@
     /// Inactive
     ///     ↓ 戦闘開始
     /// WaitingForInput
-    ///     ↓ 行動要求を受信
+    ///     ↓ 行動の指示を受信
     /// Resolving
-    ///     ├─ 無効な要求 → WaitingForInput
-    ///     └─ 有効な要求 → PlayingEffects
+    ///     ├─ 実行できない指示 → WaitingForInput
+    ///     └─ 有効な指示 → PlayingEffects
     ///                         ├─ 戦闘継続 → WaitingForInput
     ///                         └─ 戦闘終了 → Finished 
     /// </summary>
@@ -22,12 +22,12 @@
         Inactive,
         
         /// <summary>
-        /// 現在の手番の行動を受け付ける状態
+        /// 今の番のキャラクターから行動の指示を受け付ける状態
         /// </summary>
         WaitingForInput,
         
         /// <summary>
-        /// 行動を検証し、戦闘結果を計算している状態
+        /// 行動を確認し、戦闘結果を計算している状態
         /// </summary>
         Resolving,
         

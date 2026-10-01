@@ -1,4 +1,4 @@
-﻿using TMPro;
+using TMPro;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -21,7 +21,7 @@ namespace TF.UI.Result
         [SerializeField] private TextMeshProUGUI _turnText;
 
         /// <summary>
-        /// 再戦を要求するボタン
+        /// 再戦を指示するボタン
         /// </summary>
         [SerializeField] private UnityEngine.UI.Button _retryButton;
 
@@ -36,17 +36,17 @@ namespace TF.UI.Result
         private bool _isInputEnabled;
 
         /// <summary>
-        /// 再戦が要求されたときに通知
+        /// 再戦が指示されたときに通知
         /// </summary>
         public event UnityAction RetryRequested;
 
         /// <summary>
-        /// タイトルへ戻る操作が要求されたときに通知
+        /// タイトルへ戻る操作が指示されたときに通知
         /// </summary>
         public event UnityAction ReturnToTitleRequested;
 
         /// <summary>
-        /// ボタンの操作通知を登録し、入力受付状態を反映
+        /// ボタンの操作通知を登録し、入力受付状態を更新
         /// </summary>
         private void OnEnable()
         {
@@ -125,7 +125,7 @@ namespace TF.UI.Result
         }
 
         /// <summary>
-        /// 操作可能な場合に再戦要求を通知
+        /// 操作可能な場合に再戦指示を通知
         /// </summary>
         private void HandleRetryClicked()
         {
@@ -139,7 +139,7 @@ namespace TF.UI.Result
         }
 
         /// <summary>
-        /// 操作可能な場合にタイトルへ戻る要求を通知
+        /// 操作可能な場合にタイトルへ戻る指示を通知
         /// </summary>
         private void HandleReturnToTitleClicked()
         {

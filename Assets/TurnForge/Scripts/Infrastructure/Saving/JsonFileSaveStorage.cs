@@ -23,7 +23,7 @@ namespace TF.Infrastructure.Saving
         /// </summary>
         public bool TrySave<T>(string key, T data) where T : class
         {
-            // TODO LESSON03-01: キーと入力を検証し、JSONに変換して保存する。
+            // TODO LESSON03-01: キーと入力を確認し、JSONに変換して保存する。
             // 一時ファイルからの反映、I/O失敗時の扱いと後始末を実装する。
             return false;
         }

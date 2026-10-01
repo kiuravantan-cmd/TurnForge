@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using TF.GameFlow;
 using UnityEditor;
 
@@ -56,7 +56,7 @@ namespace TF.UI.GameFlow
             _gameFlow.StateChanged += HandleStateChanged;
             _isInitialized = true;
             
-            // 購読前に確定していた状態も、初回表示へ反映する。
+            // 通知を受け取る前の状態も、最初に画面へ表示する。
             HandleStateChanged(_gameFlow.CurrentState);
             return true;
         }

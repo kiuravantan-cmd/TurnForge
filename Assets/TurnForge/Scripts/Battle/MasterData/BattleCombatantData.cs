@@ -1,11 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace TF.MasterData
 {
     /// <summary>
-    /// 戦闘参加者の初期能力を定義するマスタレコード
+    /// 戦闘キャラクターの初期能力を定義するマスタレコード
     /// </summary>
     [Serializable]
     public class BattleCombatantDataRecord : IMasterData
@@ -37,7 +37,7 @@ namespace TF.MasterData
     }
 
     /// <summary>
-    /// 戦闘参加者のマスタレコード一覧を保持
+    /// 戦闘キャラクターのマスタレコード一覧を保持
     /// </summary>
     [CreateAssetMenu(fileName = "BattleCombatantData", menuName = "Scriptable Objects/BattleCombatantData")]
     public class BattleCombatantData : ScriptableObject, IMasterDataContainer<BattleCombatantDataRecord>

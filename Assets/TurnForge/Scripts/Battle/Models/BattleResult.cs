@@ -1,14 +1,14 @@
-﻿using TF.Battle.Commands;
+using TF.Battle.Commands;
 
 namespace TF.Battle.Models
 {
     /// <summary>
-    /// 有効な行動によって確定した戦闘結果
+    /// 実行できる行動によって確定した戦闘結果
     /// </summary>
     public sealed class BattleResult
     {
         /// <summary>
-        /// 実行した行動要求
+        /// 実行した行動の指示
         /// </summary>
         public BattleActionRequest Request { get; init; }
         

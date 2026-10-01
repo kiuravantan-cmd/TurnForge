@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
@@ -56,7 +56,7 @@ namespace TF.Infrastructure.Updating
                 }
                 
                 /// <summary>
-                /// 所有者へ登録解除を要求する
+                /// 所有者へ登録解除を指示する
                 /// </summary>
                 public void Dispose()
                 {

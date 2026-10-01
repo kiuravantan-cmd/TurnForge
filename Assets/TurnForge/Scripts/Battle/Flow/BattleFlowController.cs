@@ -1,4 +1,4 @@
-﻿using TF.Battle.Commands;
+using TF.Battle.Commands;
 using TF.Battle.Models;
 using UnityEngine.UIElements;
 
@@ -13,7 +13,7 @@ namespace TF.Battle.Flow
     /// プレイヤーまたはCPUが行動を選択
     ///     ↓
     /// TryExecute(request, out result)
-    ///     ├─ false → 行動不成立
+    ///     ├─ false → 行動できなかった場合
     ///     └─ true  → resultを使って演出を開始
     ///                    ↓
     ///                演出が完了
@@ -41,7 +41,7 @@ namespace TF.Battle.Flow
         public BattleActionState ActionState => _actionState;
         
         /// <summary>
-        /// 行動要求を受け付けられるか
+        /// 行動の指示を受け付けられるか
         /// </summary>
         public bool CanAcceptInput => _actionState == BattleActionState.WaitingForInput;
 
@@ -88,7 +88,7 @@ namespace TF.Battle.Flow
                 return false;
             }
             
-            // モデルの通知中にも次の要求が入らないように先に閉じる
+            // モデルの通知中にも次の指示が入らないように先に閉じる
             _actionState = BattleActionState.Resolving;
 
             if (!_model.TryExecute(request, out result))

@@ -29,7 +29,7 @@ namespace TF.UI.Battle
         [SerializeField] private TextMeshProUGUI _secondStatus;
 
         /// <summary>
-        /// 手番表示
+        /// 今どちらの番かを表示
         /// </summary>
         [SerializeField] private TextMeshProUGUI _turnText;
 
@@ -121,7 +121,7 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// HP・エネルギー・手番を表示
+        /// HP・エネルギー・行動する番を表示
         /// </summary>
         public void Render(BattleState state)
         {
@@ -153,7 +153,7 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// 指定したコマンドの使用可否を保持し、ボタンへ反映する
+        /// 指定した技が使えるかどうかを覚えておき、ボタンを更新する
         /// </summary>
         /// <param name="command">対象のコマンド</param>
         /// <param name="enabled">実行条件を満たしているか</param>
@@ -172,7 +172,7 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// Presenterが保持する選択を表示へ反映
+        /// Presenterが覚えている選択内容を画面に表示する
         /// </summary>
         public void SetSelectedCommand(BattleCommand? command)
         {
@@ -286,7 +286,7 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// 参加者の状態を表示用文字列へ変換
+        /// キャラクターの状態を表示用文字列へ変換
         /// </summary>
         private static string FormatCombatant (CombatantState state)
         {
@@ -327,7 +327,7 @@ namespace TF.UI.Battle
         }
 
         /// <summary>
-        /// ボタンが設定されている場合に操作可否を更新
+        /// ボタンが設定されている場合に操作できるかどうかを更新
         /// </summary>
         private static void SetInteractable (Button button, bool interactable)
         {

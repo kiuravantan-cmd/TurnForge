@@ -1,4 +1,4 @@
-﻿using UnityEngine.Events;
+using UnityEngine.Events;
 
 namespace TF.UI.Result
 {
@@ -8,12 +8,12 @@ namespace TF.UI.Result
     public interface IResultView
     {
         /// <summary>
-        /// 再戦が要求されたときに通知
+        /// 再戦が指示されたときに通知
         /// </summary>
         event UnityAction RetryRequested;
 
         /// <summary>
-        /// タイトルへ戻る操作が要求されたときに通知
+        /// タイトルへ戻る操作が指示されたときに通知
         /// </summary>
         event UnityAction ReturnToTitleRequested;
 

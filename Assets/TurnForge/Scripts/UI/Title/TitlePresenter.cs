@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Cysharp.Threading.Tasks;
 using TF.GameFlow;
 
@@ -30,7 +30,7 @@ namespace TF.UI.Title
         private bool _isInitialized = false;
 
         /// <summary>
-        /// このPresenterからの開始要求を処理しているか
+        /// このPresenterからの開始指示を処理しているか
         /// </summary>
         private bool _isStarting = false;
         
@@ -73,7 +73,7 @@ namespace TF.UI.Title
         }
 
         /// <summary>
-        /// タイトルでの開始要求を受け付ける
+        /// タイトルでの開始指示を受け付ける
         /// </summary>
         private void HandleStartRequested()
         {

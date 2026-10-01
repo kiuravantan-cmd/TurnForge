@@ -1,9 +1,9 @@
-﻿namespace TF.Infrastructure.Updating
+namespace TF.Infrastructure.Updating
 {
     public static class UpdateOrder
     {
         /// <summary>
-        /// 入力要求の処理
+        /// 入力指示の処理
         /// </summary>
         public const int Input = 100;
 

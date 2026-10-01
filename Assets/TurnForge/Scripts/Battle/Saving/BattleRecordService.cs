@@ -56,7 +56,7 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TryLoad ()
         {
-            // TODO LESSON03-03: 未保存の場合だけ初期値を採用し、読み込み成功を検証する。
+            // TODO LESSON03-03: 未保存の場合だけ初期値を採用し、読み込み成功を確認する。
             // 未保存の変更を読み込みで失わないこと。成功時のみIsInitializedを更新する。
             return false;
         }
@@ -68,7 +68,7 @@ namespace TF.Battle.Saving
         /// <param name="playerSide">プレイヤーの陣営</param>
         public bool TryRecordResult(BattleState state, BattleSide playerSide)
         {
-            // TODO LESSON03-04: 初期化・終了状態・陣営・重複・桁あふれを検証する。
+            // TODO LESSON03-04: 初期化・終了状態・陣営・重複・桁あふれを確認する。
             // プレイヤー視点で戦績を加算し、HasUnsavedChangesを立てる。
             return false;
         }
@@ -88,7 +88,7 @@ namespace TF.Battle.Saving
         /// </summary>
         private static bool IsValidData(BattleRecordSaveData data)
         {
-            // TODO LESSON03-06: null・保存形式の版番号・負の戦績を検証する。
+            // TODO LESSON03-06: null・保存形式の版番号・負の戦績を確認する。
             return false;
         }
     }

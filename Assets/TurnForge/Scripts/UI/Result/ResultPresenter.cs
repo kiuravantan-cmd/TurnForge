@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Cysharp.Threading.Tasks;
 using TF.Battle;
 using TF.Battle.Models;
@@ -107,7 +107,7 @@ namespace TF.UI.Result
         }
 
         /// <summary>
-        /// 終了した戦闘の勝敗とターン番号を表示へ反映
+        /// バトル終了時の勝敗とターン番号を画面に表示する
         /// </summary>
         public bool TrySetResult(BattleState state)
         {
@@ -160,7 +160,7 @@ namespace TF.UI.Result
         }
 
         /// <summary>
-        /// 結果画面からの再戦要求を受け付ける
+        /// 結果画面からの再戦指示を受け付ける
         /// </summary>
         private void HandleRetryRequested()
         {

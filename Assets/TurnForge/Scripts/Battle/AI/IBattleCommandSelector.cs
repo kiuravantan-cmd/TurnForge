@@ -1,4 +1,4 @@
-﻿using TF.Battle.Commands;
+using TF.Battle.Commands;
 using TF.Battle.Models;
 
 namespace TF.Battle.AI
@@ -9,7 +9,7 @@ namespace TF.Battle.AI
     public interface IBattleCommandSelector
     {
         /// <summary>
-        /// 指定した参加者のコマンドを選択する。選択できない場合はfalseを返す。
+        /// 指定したキャラクターのコマンドを選択する。選択できない場合はfalseを返す。
         /// </summary>
         bool TrySelectCommand(BattleState state, BattleSide actor, out BattleCommand command);
     }

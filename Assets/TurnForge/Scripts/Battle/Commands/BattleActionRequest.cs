@@ -1,14 +1,14 @@
-﻿using TF.Battle.Models;
+using TF.Battle.Models;
 
 namespace TF.Battle.Commands
 {
     /// <summary>
-    /// 対戦者が実行を要求した行動
+    /// 対戦者が実行を指示した行動
     /// </summary>
     public sealed class BattleActionRequest
     {
         /// <summary>
-        /// 行動を要求する対戦者
+        /// 行動を指示する対戦者
         /// </summary>
         public BattleSide Actor { get; init; }
         
@@ -18,12 +18,12 @@ namespace TF.Battle.Commands
         public int TurnNumber { get; init; }
         
         /// <summary>
-        /// 実行を要求する行動
+        /// 実行を指示する行動
         /// </summary>
         public BattleCommand Command { get; init; }
 
         /// <summary>
-        /// 対戦者・ターン番号・行動を指定して要求を作成
+        /// 対戦者・ターン番号・行動を指定して指示を作成
         /// </summary>
         public BattleActionRequest(BattleSide actor, int turnNumber, BattleCommand command)
         {

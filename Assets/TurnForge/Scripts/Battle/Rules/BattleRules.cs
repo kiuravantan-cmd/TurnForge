@@ -7,7 +7,7 @@ using TF.MasterData;
 namespace TF.Battle.Rules
 {
     /// <summary>
-    /// 行動を検証し、次の戦闘状態を計算
+    /// 行動を確認し、次の戦闘状態を計算
     /// </summary>
     public sealed class BattleRules
     {
@@ -67,10 +67,10 @@ namespace TF.Battle.Rules
         }
 
         /// <summary>
-        /// 状態を変更せず、行動要求が実行条件を満たすか
+        /// 状態を変更せず、行動の指示が実行条件を満たすか
         /// </summary>
         /// <param name="state">判定対象の戦闘状態</param>
-        /// <param name="request">確認する行動要求</param>
+        /// <param name="request">確認する行動の指示</param>
         public bool CanExecute(BattleState state, BattleActionRequest request)
         {
             return CanExecute(state, request, out _);
@@ -78,22 +78,22 @@ namespace TF.Battle.Rules
         
         /// <summary>
         /// 行動を処理
-        /// 無効な場合はfalseを返し、結果を生成しない
+        /// 無効な場合はfalseを返し、結果を作成しない
         /// </summary>
         public bool TryExecute(BattleState currentState, BattleActionRequest request, out BattleResult result)
         {
             result = null;
-            // TODO LESSON01-03: CanExecuteで要求を確認し、行動者と相手を取得する。
+            // TODO LESSON01-03: CanExecuteで指示を確認し、行動する側と相手を取得する。
             // 通常攻撃のマスタ値とApplyDamageを使って、攻撃後の状態を作る。
-            // HP0なら終了。継続時だけ手番を交代し、ターン番号を1進める。
+            // HP0なら終了。バトルが続くときだけ行動する番を交代し、ターン番号を1進める。
             // First/Secondの順でBattleStateを作り、前後の状態をBattleResultへ渡す。
             // TODO LESSON06-01: 防御・チャージ・必殺技、コストとエネルギー上限を追加する。
-            // 防御は次の自分の手番開始時に解除する。計算値の桁あふれにも対応する。
+            // 防御は次の自分の番開始時に解除する。計算値の桁あふれにも対応する。
             return false;
         }
 
         /// <summary>
-        /// 状態と要求を検証し、行動を実行できるか判定
+        /// 状態と指示を確認し、行動を実行できるか判定
         /// </summary>
         private bool CanExecute(
             BattleState state,
@@ -101,17 +101,17 @@ namespace TF.Battle.Rules
             out BattleCommandDataRecord commandData)
         {
             commandData = null;
-            // TODO LESSON01-02: 未設定・終了済み・不正な参加者・手番違いを拒否する。
-            // _commandDataから要求されたコマンドのマスタを取得する。
-            // 第1回はAttackだけ許可する。他の技は第6回まで拒否する。
-            // TODO LESSON06-02: 技のコスト不足・チャージ上限を検証する。
+            // TODO LESSON01-02: 未設定・終了済み・HPなどの値がルールに合わないキャラクター・行動する側が違う場合を受け付けない。
+            // _commandDataから指示されたコマンドのマスタを取得する。
+            // 第1回はAttackだけ許可する。他の技は第6回まで受け付けない。
+            // TODO LESSON06-02: 技のコスト不足・チャージ上限を確認する。
             // TODO LESSON08-01: オンラインでもホスト側でこの判定を通す。
-            // 現在のターン番号と要求の番号を照合し、古い要求・二重要求を拒否する。
+            // 現在のターン番号と指示の番号を照合し、古い指示・二重指示を受け付けない。
             return false;
         }
 
         /// <summary>
-        /// 戦闘に使える参加者の状態か判定
+        /// 戦闘に使えるキャラクターの状態か判定
         /// </summary>
         private static bool IsValidCombatant(CombatantState combatant, BattleSide expectedSide)
         {
@@ -126,7 +126,7 @@ namespace TF.Battle.Rules
         }
 
         /// <summary>
-        /// 識別子に対応する参加者を取得
+        /// 識別子に対応するキャラクターを取得
         /// </summary>
         private static CombatantState GetCombatant(BattleState state, BattleSide side)
         {
@@ -142,7 +142,7 @@ namespace TF.Battle.Rules
         }
 
         /// <summary>
-        /// 防御による軽減を適用し、被ダメージ後の状態を生成
+        /// 防御による軽減を適用し、ダメージを受けた後の状態を作成
         /// </summary>
         private static CombatantState ApplyDamage(CombatantState target, int damage, int guardDamageDivisor)
         {
@@ -153,7 +153,7 @@ namespace TF.Battle.Rules
         }
 
         /// <summary>
-        /// 識別子と最大値を引き継ぎ、指定された値で状態を生成
+        /// キャラクターを区別する値と最大値を引き継ぎ、指定された値で状態を作成
         /// </summary>
         private static CombatantState CopyCombatant(CombatantState source, int hp, int energy, bool isGuarding)
         {

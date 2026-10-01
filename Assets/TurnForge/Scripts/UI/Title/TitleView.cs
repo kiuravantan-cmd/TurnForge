@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
@@ -21,7 +21,7 @@ namespace TF.UI.Title
         private bool _isInputEnabled = false;
 
         /// <summary>
-        /// 新しい戦闘の開始が要求されたときに通知
+        /// 新しい戦闘の開始が指示されたときに通知
         /// </summary>
         public event UnityAction StartRequested;
 
@@ -52,7 +52,7 @@ namespace TF.UI.Title
         }
 
         /// <summary>
-        /// Presenterから指定された入力受付状態を反映
+        /// Presenterから指定された入力受付状態を更新
         /// </summary>
         public void SetInputEnabled(bool isEnabled)
         {

@@ -68,12 +68,12 @@ namespace TF.Composition
              new UiSelectionController[0];
 
         /// <summary>
-        /// 1人目に使用する参加者マスタのID
+        /// 1人目に使用するキャラクターマスタのID
         /// </summary>
         [SerializeField] private ulong _firstCombatantId = 1;
         
         /// <summary>
-        /// 2人目に使用する参加者マスタのID
+        /// 2人目に使用するキャラクターマスタのID
         /// </summary>
         [SerializeField] private ulong _secondCombatantId = 1;
 
@@ -88,7 +88,7 @@ namespace TF.Composition
         private bool _ownsRunner;
         
         /// <summary>
-        /// 現在の戦闘状態を保持するモデル
+        /// 現在のHPや行動する番を覚えておくモデル
         /// </summary>
         private BattleModel _battleModel;
 
@@ -118,7 +118,7 @@ namespace TF.Composition
         private bool _isStartingBattle = false;
 
         /// <summary>
-        /// ゲーム状態を画面へ反映するPresenter
+        /// ゲーム状態を画面に表示するPresenter
         /// </summary>
         private GameScreenPresenter _gameScreenPresenter;
 
@@ -138,7 +138,7 @@ namespace TF.Composition
         private BattlePresenter _battlePresenter;
 
         /// <summary>
-        /// CPUの行動選択と実行要求を管理
+        /// CPUの行動選択と実行指示を管理
         /// </summary>
         private BattleCpuController _battleCpu;
 
@@ -175,7 +175,7 @@ namespace TF.Composition
             {
                 Debug.LogError("更新基盤を初期化できませんでした。", this);
                 
-                // // 初期化途中で生成したリソースを解放
+                // // 初期化途中で作ったリソースを解放
                 Release();
                 enabled = false;
             }
@@ -320,7 +320,7 @@ namespace TF.Composition
             // TODO LESSON03-07: セーブ機能完成後、読み込みと失敗時の扱いを接続する。
             // 配布時は保存を呼び出さず、タイトルへ進める。
 
-            // マスタ読み込みと戦闘生成の結果
+            // マスタ読み込みと戦闘作成の結果
             bool succeeded = await LoadMasterDataAsync();
             
             // 待機中に破棄された場合は、そのまま終了する
@@ -378,7 +378,7 @@ namespace TF.Composition
         }
 
         /// <summary>
-        /// 読み込み済みマスタから、1戦分のオブジェクトを生成する。
+        /// 読み込み済みマスタから、1戦分のオブジェクトを作る。
         /// </summary>
         private bool TryComposeBattle()
         {
@@ -402,7 +402,7 @@ namespace TF.Composition
                 return false;
             }
             
-            // マスタから初期化状態を生成するFactory
+            // マスタから初期化状態を作るFactory
             var factory = new BattleStateFactory();
             if (!factory.TryCreateInitialState(firstCombatant, secondCombatant, out var initialState))
             {
@@ -531,7 +531,7 @@ namespace TF.Composition
         }
         
         /// <summary>
-        /// ローディング中の戦闘準備に中断を要求
+        /// ローディング中の戦闘準備に中断を指示
         /// </summary>
         public void CancelBattlePreparation()
         {
@@ -632,7 +632,7 @@ namespace TF.Composition
                 return;
             }
             
-            // 非同期処理が完了しても、戦闘を生成し直さないようにする
+            // 非同期処理が完了しても、戦闘を作り直さないようにする
             _isReleased = true;
             
             // 自分が初期化したRunnerだけを停止する
@@ -701,7 +701,7 @@ namespace TF.Composition
                 return;
             }
 
-            // CPUの手番や戦闘終了後の要求は、本体のルールで拒否する。
+            // CPUの番や戦闘終了後の指示は、本体のルールで受け付けない。
             var request = new TF.Battle.Commands.BattleActionRequest(
                 BattleSide.First, _battleModel.CurrentState.TurnNumber,
                 TF.Battle.Commands.BattleCommand.Attack);

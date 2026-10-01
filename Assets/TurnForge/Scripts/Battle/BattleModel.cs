@@ -6,12 +6,12 @@ using UnityEngine.Events;
 namespace TF.Battle
 {
     /// <summary>
-    /// 現在の戦闘状態を保持し、行動結果を適用
+    /// 現在のHPや行動する番を覚えておき、行動後のデータに更新する
     /// </summary>
     public sealed class BattleModel
     {
         /// <summary>
-        /// 行動の検証と状態の計算を担当するルール
+        /// 行動の確認と状態の計算を担当するルール
         /// </summary>
         private readonly BattleRules _rules;
         
@@ -26,7 +26,7 @@ namespace TF.Battle
         public BattleState CurrentState => _currentState;
 
         /// <summary>
-        /// 有効な行動の結果を適用した後に通知
+        /// 実行できる行動の結果を適用した後に通知
         /// </summary>
         public event UnityAction<BattleResult> ActionResolved;
         
@@ -51,7 +51,7 @@ namespace TF.Battle
                 return false;
             }
 
-            // 現在のターン番号を使って確認用の要求を作成
+            // 現在のターン番号を使って確認用の指示を作成
             var request = new BattleActionRequest(actor, _currentState.TurnNumber, command);
 
             return _rules.CanExecute(_currentState, request);
@@ -62,7 +62,7 @@ namespace TF.Battle
             result = null;
             // TODO LESSON01-04: ルールへ処理を委ね、成功時だけ現在状態を置き換える。
             // 現在状態を更新した後にActionResolvedで結果を通知する。
-            // 不成立の要求では現在状態を変更しない。
+            // 実行できない指示では現在状態を変更しない。
             // TODO LESSON04-01: R3による状態通知へ移行し、購読の所有者と寿命を決める。
             return false;
         }
