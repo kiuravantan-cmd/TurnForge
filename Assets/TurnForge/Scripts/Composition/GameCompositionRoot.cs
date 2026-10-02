@@ -239,7 +239,16 @@ namespace TF.Composition
 
             // オフライン用の準備処理を接続
             // TODO LESSON07-01: オンライン用の準備処理を追加し、同一PCの2プロセスを接続する。
+            // 第7回・1コマ目: 講師の接続基盤を使い、同一PCの別認証・別保存先の2プロセスをRelayで接続する。
+            // IBattlePreparationのオンライン用実装を追加し、接続完了までローディングで待つ。
+            // TODO LESSON07-02: 第7回・2コマ目で指示送信・ホストでの計算・確定結果の通知を接続する。
+            // クライアントはHPを独自に確定しない。ホストの結果をModelへ反映し、同じ結果を表示する。
+            // オンラインではCPUの自動行動を止め、各接続先と操作する陣営を対応させる。
             // TODO LESSON08-02: 切断通知と終了処理を接続する。
+            // 第8回・2コマ目: 切断時は入力を止め、案内を出し、通信の購読とリソースを解放する。
+            // タイトルへ戻る経路を用意し、途中参加・再接続・ホスト移行は今回の範囲に含めない。
+            // TODO LESSON08-03: 通信受付側で送信者と陣営を照合し、重複・古い指示を拒否する。
+            // 結果にも順序を識別する番号を持たせ、同じ結果の再適用と古い結果への巻き戻りを防ぐ。
             var preparation = new OfflineBattlePreparation();
             
             _battleLoading = new BattleLoadingController(_gameFlow, preparation);
@@ -318,6 +327,8 @@ namespace TF.Composition
             }
 
             // TODO LESSON03-07: セーブ機能完成後、読み込みと失敗時の扱いを接続する。
+            // 第3回・2コマ目: 読み込み完了後に新規開始・再開・失敗時の案内を切り替える。
+            // 未保存と破損を区別し、破損データは保護したうえで新規開始を選べるようにする。
             // 配布時は保存を呼び出さず、タイトルへ進める。
 
             // マスタ読み込みと戦闘作成の結果
@@ -380,9 +391,17 @@ namespace TF.Composition
         /// <summary>
         /// 読み込み済みマスタから、1戦分のオブジェクトを作る。
         /// </summary>
+        // TODO LESSON02-10: 第2回・2〜3コマ目で操作方式の設定と入力切り替え用クラスを追加・接続する。
+        // 方式を覚え、選択中の技を解除し、パッド・キーでは使用可能なボタンへフォーカスを置く。
+        // TODO LESSON02-11: 第2回・4コマ目で未接続パッドの案内と設定へ戻る操作を接続する。
+        // 戦闘入力を止めても、方式を選び直すキーボード・クリックの入口は残す。
+        // 講師準備: 設定画面・InputActionの参照・回復ボタンの枠を配布する。
         private bool TryComposeBattle()
         {
             // TODO LESSON05-02: この手動の組み立てをVContainerへ移行する。
+            // 第5回・2〜3コマ目: LifetimeScopeでModel・Rules・Presenter・CPUなどの依存を登録する。
+            // 戦闘ごとにスコープを作成・破棄し、再戦時に状態・購読・CPUを持ち越さない。
+            // IBattleCommandSelectorの登録を変え、自作CPUへ差し替える。
             // 戦闘単位の寿命と破棄順を保ち、CPUの実装を登録で差し替える。
             MasterDataAccessor accessor = MasterDataAccessor.Instance;
             if (accessor == null || !accessor.IsInitialized)
@@ -607,6 +626,7 @@ namespace TF.Composition
             }
 
             // TODO LESSON03-09: 戦績の加算と保存を接続する。重複加算を防ぐ。
+            // 第3回・2コマ目: 終了した状態を一度だけ戦績へ加算し、変更があれば保存する。
         }
 
         /// <summary>
@@ -673,6 +693,10 @@ namespace TF.Composition
         private bool TryInitializeBattleRecord ()
         {
             // TODO LESSON03-07: 保存先とServiceを組み立て、起動時の読み込みを接続する。
+            // TODO LESSON03-11: 第3回・3コマ目で戦闘再開用DTOと復元処理を追加する。
+            // 両者のHP・エネルギー・防御、番・番号、キャラクターID、操作方式を保存する。
+            // マスタから固定値を読み直し、保存データの値とIDを確認してから戦闘状態を復元する。
+            // 戦績DTOは勝敗数の保存用。戦闘途中の再開DTOとは分ける。
             // 学生用の保存先は講師用と分ける（例：persistentDataPath/TurnForgeLessons）。
             // 戦闘途中の状態・キャラクターID・操作設定の保存データも第3回で追加する。
             return false;
@@ -684,6 +708,8 @@ namespace TF.Composition
         private void SaveBattleRecordIfNeeded ()
         {
             // TODO LESSON03-08: 変更がある場合だけ保存し、失敗時は後で再試行する。
+            // 第3回・3コマ目: 戦闘途中の保存は次のターン開始時など、結果が確定した区切りへ接続する。
+            // オンラインの途中状態をローカル保存から単独で復元する処理は追加しない。
             // 戦闘途中の保存はターン開始時に接続し、演出途中では保存しない。
         }
 
@@ -714,6 +740,7 @@ namespace TF.Composition
         private void OnDestroy()
         {
             // TODO LESSON03-10: 終了時の未保存データの再保存を接続する。
+            // 第3回・2コマ目: 終了前に未保存の変更を保存する。終了時だけの保存に頼らない。
             Release();
         }
     }   

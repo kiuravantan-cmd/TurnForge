@@ -5,6 +5,10 @@ namespace TF.Battle.Commands
     /// <summary>
     /// 対戦者が実行を指示した行動
     /// </summary>
+    // TODO LESSON07-03: 第7回・2コマ目で、この指示を通信で運ぶDTOと変換処理を別途追加する。
+    // Actor・TurnNumber・Commandを運び、ホスト側の受付で戦闘指示へ変換する。
+    // TODO LESSON08-04: 第8回・2コマ目で通信指示を識別する番号と重複排除を追加する。
+    // 送信者は通信APIから取得し、クライアントが指示に書いたActorと照合する。
     public sealed class BattleActionRequest
     {
         /// <summary>

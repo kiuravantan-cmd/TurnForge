@@ -194,6 +194,8 @@ namespace TF.UI.Battle
             }
 
             // TODO LESSON06-04: 演出の待機とキャンセルを追加する。
+            // 第6回・2コマ目: 必要なDOTween・UniTaskで演出完了を待ち、終了時はtokenで中断する。
+            // 演出の前に結果は確定済み。中断でHP・エネルギー・番を巻き戻さない。
             // 結果は確定済みのため、演出が中断されても戦闘状態を巻き戻さない。
             return UniTask.CompletedTask;
         }
@@ -257,6 +259,7 @@ namespace TF.UI.Battle
         private void NotifySelection(BattleCommand command)
         {
             // TODO LESSON02-06: 有効な選択操作をCommandSelectedへ通知する。
+            // 第2回・2コマ目: Viewが有効・入力受付中・使用可能な技の場合だけ通知する。
         }
 
         /// <summary>
@@ -265,6 +268,7 @@ namespace TF.UI.Battle
         private void HandleConfirm()
         {
             // TODO LESSON02-07: 有効な決定操作をConfirmRequestedへ通知する。
+            // 第2回・2コマ目: 入力受付中・選択あり・選択した技が使用可能な場合だけ通知する。
         }
 
         /// <summary>
@@ -273,6 +277,7 @@ namespace TF.UI.Battle
         private void HandleCancel()
         {
             // TODO LESSON02-08: 有効な取消操作をCancelRequestedへ通知する。
+            // 第2回・2コマ目: 入力受付中・選択ありの場合だけ通知する。取消に技の使用可否は要求しない。
         }
 
         /// <summary>
@@ -282,6 +287,8 @@ namespace TF.UI.Battle
         public void OnCancel (BaseEventData eventData)
         {
             // TODO LESSON02-09: パッド・キーの取消をHandleCancelへ合流させる。
+            // 第2回・2コマ目: null・使用済み・無効なView・入力停止・未選択を拒否する。
+            // 有効な取消はUseで使用済みにしてからHandleCancelへ渡し、二重通知を防ぐ。
             // 無効・処理済みのイベントを拒否し、有効なら消費する。
         }
 

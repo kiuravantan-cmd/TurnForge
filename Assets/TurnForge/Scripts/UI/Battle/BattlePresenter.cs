@@ -71,6 +71,7 @@ namespace TF.UI.Battle
         /// プレイヤーからの操作を受け付けられるか
         /// </summary>
         // TODO LESSON02-01: 初期化・破棄・実行中・入力受付・行動する番を判定する。
+        // 第2回・1コマ目: 現在状態があり、バトルが続き、ActionSideが_inputSideと一致すること。
         private bool CanAcceptPlayerInput => false;
 
         /// <summary>
@@ -121,6 +122,9 @@ namespace TF.UI.Battle
         private void HandleCommandSelected(BattleCommand command)
         {
             // TODO LESSON02-02: 操作できるかどうかと技の実行条件を確認し、選択を保持してViewの表示を更新する。
+            // 第2回・1コマ目: Model.CanExecute(_inputSide, command)で使える技かを調べる。
+            // 使用可能なら_selectedCommandへ覚え、SetSelectedCommandとRefreshInputへ反映する。
+            // 選んだだけでは戦闘を実行しない。
         }
 
         /// <summary>
@@ -129,6 +133,8 @@ namespace TF.UI.Battle
         private void HandleConfirmRequested()
         {
             // TODO LESSON02-03: 選択済みの技を再確認し、現在のターン番号で指示を作る。
+            // 第2回・1コマ目: 受付可能・選択あり・使用可能を確認し、最新番号でBattleActionRequestを作る。
+            // TryExecuteAsyncへ合流させ、方式別の攻撃処理を作らない。
             // パッド・キー・クリックともTryExecuteAsyncへ送る。
         }
 
@@ -138,6 +144,7 @@ namespace TF.UI.Battle
         private void HandleCancelRequested()
         {
             // TODO LESSON02-04: 操作可能な場合に選択を解除し、Viewの表示を更新する。
+            // 第2回・1コマ目: _selectedCommandをnullにし、表示とボタンを更新する。HPや番号は変えない。
         }
 
         /// <summary>
@@ -210,9 +217,15 @@ namespace TF.UI.Battle
             }
 
             // TODO LESSON02-05: 各技が使えるか確かめ、選択内容とボタンの操作を更新する。
+            // 第2回・1コマ目: 各技のModel.CanExecuteをSetCommandEnabledへ反映する。
+            // 使用不可になった選択を解除し、選択表示と全体のSetInputEnabledを更新する。
+            // 第2回・3コマ目: 方式変更時もPresenterの選択とViewの表示の両方を解除する。
             // 配布時は未実装の操作が実行されないように全体を無効化する。
             _view.SetInputEnabled(false);
             // TODO LESSON04-02: R3で操作できるかどうかの変化を購読し、再表示時の重複購読を防ぐ。
+            // 第4回・2〜3コマ目: HP・エネルギー・操作可否の変化を購読し、Viewの表示へ反映する。
+            // 購読は初期化時に1回だけ開始する。RefreshInputが呼ばれるたびに追加しない。
+            // 第4回・4コマ目: HPが少ない場合の警告表示を購読から追加する。
         }
 
         /// <summary>
@@ -221,6 +234,7 @@ namespace TF.UI.Battle
         public void Dispose()
         {
             // TODO LESSON04-03: 追加したR3の購読も、この所有者の終了時に解放する。
+            // 第4回・3コマ目: 購読をまとめて保持し、Dispose時に解除する。再戦で前の購読を残さない。
             if (_isDisposed)
             {
                 return;

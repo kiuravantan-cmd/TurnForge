@@ -7,6 +7,8 @@ namespace TF.Battle.Saving
     /// JSONへ保存する戦績データ
     /// </summary>
     [Serializable]
+    // TODO LESSON03-12: 第3回・3コマ目で別の戦闘再開用DTOをこのフォルダーへ追加する。
+    // 現在状態・キャラクターID・操作方式・保存形式の版番号を保存し、戦績とは区別する。
     public sealed class BattleRecordSaveData
     {
         /// <summary>

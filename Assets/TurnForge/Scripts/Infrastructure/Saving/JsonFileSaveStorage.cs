@@ -24,6 +24,9 @@ namespace TF.Infrastructure.Saving
         public bool TrySave<T>(string key, T data) where T : class
         {
             // TODO LESSON03-01: キーと入力を確認し、JSONに変換して保存する。
+            // 第3回・1〜2コマ目: キーを英数字・ハイフン・アンダースコアに限定して保存先を作る。
+            // JSONを一時ファイルへ書き、書き込み成功後に保存先へ反映する。
+            // ファイルI/Oの境界でtry/catchし、失敗はfalseで返して既存データを保護する。
             // 一時ファイルからの反映、I/O失敗時の扱いと後始末を実装する。
             return false;
         }
@@ -36,6 +39,8 @@ namespace TF.Infrastructure.Saving
             data = null;
             status = SaveLoadStatus.Failed;
             // TODO LESSON03-02: JSONを読み込み、成功・未保存・失敗を区別する。
+            // 第3回・2コマ目: ファイルなしはNotFound、読み込み・変換の失敗はFailedに分ける。
+            // 読み込み成功時だけdataを返す。破損を初回扱いにして上書きしない。
             // 未実装をNotFoundとして返さない。既存データの上書きを防ぐ。
             return false;
         }
