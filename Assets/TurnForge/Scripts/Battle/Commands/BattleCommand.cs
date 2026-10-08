@@ -24,5 +24,10 @@
         /// エネルギーを消費して必殺技を使う
         /// </summary>
         Special,
+
+        /// <summary>
+        /// 回復を行う
+        /// </summary>
+        Heal,
     }
 }

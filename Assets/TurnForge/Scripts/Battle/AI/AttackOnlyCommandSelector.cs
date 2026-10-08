@@ -9,15 +9,38 @@ namespace TF.Battle.AI
     public sealed class AttackOnlyCommandSelector : IBattleCommandSelector
     {
         /// <summary>
-        /// 戦闘が継続中で、自分の番なら攻撃を選択
+        /// 自分のHPが半分以下なら回復、それ以外は通常攻撃を選ぶ。
         /// </summary>
         public bool TrySelectCommand(BattleState state, BattleSide actor, out BattleCommand command)
         {
             command = default;
-            // TODO LESSON01-05: 継続中かつ指定した側の番なら通常攻撃を選ぶ。
-            // 第1回・2コマ目: 状態あり・継続中・有効な陣営・自分の番ならAttackを返す。
-            // TODO LESSON01-07: 第1回・4コマ目でactor側のHPを読み、半分以下なら回復を選ぶ。
-            // HPが半分より多ければAttack。HP計算や番の交代はRulesに任せる。
+
+            if (state == null || state.IsFinished)
+            {
+                return false;
+            }
+
+            if (actor != BattleSide.First && actor != BattleSide.Second)
+            {
+                return false;
+            }
+
+            if (state.ActionSide != actor)
+            {
+                return false;
+            }
+
+            // 行動する側の状態。CPUをSecondに固定せず、actorから選ぶ。
+            CombatantState self = actor == BattleSide.First ? state.FirstCombatant : state.SecondCombatant;
+            if (self == null || self.MaxHp <= 0 || self.Hp <= 0 || self.Hp > self.MaxHp)
+            {
+                return false;
+            }
+
+            command = self.Hp <= self.MaxHp / 2 ? BattleCommand.Heal : BattleCommand.Attack;
+            return true;
+
+
             // TODO LESSON05-01: このインターフェースを使う別のCPU判断を追加し、DIで差し替える。
             // 第5回・1/4コマ目: IBattleCommandSelectorを実装した別クラスを追加する。
             // CPUは技だけを選び、Rulesを変更せず登録した実装の差し替えで判断を変える。

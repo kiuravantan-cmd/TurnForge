@@ -75,23 +75,71 @@ namespace TF.Battle.Rules
         {
             return CanExecute(state, request, out _);
         }
-        
+
         /// <summary>
-        /// 行動を処理
-        /// 無効な場合はfalseを返し、結果を作成しない
+        /// 通常攻撃または回復を処理し、次の戦闘状態を作る。
         /// </summary>
         public bool TryExecute(BattleState currentState, BattleActionRequest request, out BattleResult result)
         {
             result = null;
-            // TODO LESSON01-03: CanExecuteで指示を確認し、行動する側と相手を取得する。
-            // 第1回・2コマ目: resultをnullにし、CanExecuteで状態・指示・技のマスタを確認する。
-            // 通常攻撃は相手のHPを減らし、HP0なら終了。続く場合だけ番を交代し、番号を1増やす。
-            // First/Secondの配置を保ち、変更前と変更後をBattleResultへまとめる。
-            // TODO LESSON01-06B: 第1回・3コマ目で回復の分岐を追加し、自分の回復後の状態を組み込む。
-            // 回復でもターン交代と結果作成は共通にし、変更前の状態は書き換えない。
-            // 通常攻撃のマスタ値とApplyDamageを使って、攻撃後の状態を作る。
-            // HP0なら終了。バトルが続くときだけ行動する番を交代し、ターン番号を1進める。
-            // First/Secondの順でBattleStateを作り、前後の状態をBattleResultへ渡す。
+            if (!CanExecute(currentState, request, out var commandData))
+            {
+                return false;
+            }
+
+            // 攻撃するキャラクターと、攻撃を受けるキャラクター。
+            CombatantState actor = GetCombatant(currentState, request.Actor);
+            CombatantState target = GetCombatant(
+                currentState, GetOpponentSide(request.Actor));
+
+            CombatantState nexatActor = actor;
+            CombatantState nextTarget = target;
+
+            switch (request.Command)
+            {
+                case BattleCommand.Attack:
+                    nextTarget = ApplyDamage(target, commandData.Damage, 1);
+                    break;
+                case BattleCommand.Heal:
+                    nexatActor = ApplyRecovery(actor, commandData.Recovery);
+                    break;
+                default:
+                    return false;
+            }
+
+            // 相手のHPが0になったか。
+            bool isFinished = nextTarget.IsDefeated;
+
+            // 勝敗が決まったときは現在の行動する番とターン番号をそのままにする。
+            BattleSide nextActionSide = currentState.ActionSide;
+            int nextTurnNumber = currentState.TurnNumber;
+
+            if (!isFinished)
+            {
+                // ターン番号が表現できない指示は実行しない。
+                if (nextTurnNumber == int.MaxValue)
+                {
+                    return false;
+                }
+
+                nextActionSide = target.Side;
+                nextTurnNumber++;
+            }
+
+            // 攻撃側にかかわらず、キャラクターをFirst、Secondの順に並べる。
+            CombatantState nextFirst =
+                request.Actor == BattleSide.First ? nexatActor : nextTarget;
+            CombatantState nextSecond =
+                request.Actor == BattleSide.Second ? nexatActor : nextTarget;
+
+            // 次の時点の戦闘状態。
+            BattleState nextState = new BattleState(
+                nextFirst, nextSecond, nextActionSide,
+                nextTurnNumber, isFinished);
+
+            result = new BattleResult(request, currentState, nextState);
+            return true;
+
             // TODO LESSON06-01: 防御・チャージ・必殺技、コストとエネルギー上限を追加する。
             // 第6回・1コマ目: マスタのEnergyCostを引き、EnergyGainを加え、MaxEnergy以下に収める。
             // 防御は自分のIsGuardingを立て、次の自分の番開始時に解除する。
@@ -110,10 +158,43 @@ namespace TF.Battle.Rules
             out BattleCommandDataRecord commandData)
         {
             commandData = null;
-            // TODO LESSON01-02: 未設定・終了済み・HPなどの値がルールに合わないキャラクター・行動する側が違う場合を受け付けない。
-            // 第1回・1コマ目: null、終了、キャラクターのHPなど、陣営、ターン番号を順に確認する。
-            // 指示のActorとActionSide、指示のTurnNumberと現在番号が一致すること。
-            // 通常攻撃のマスタを取得してoutへ渡し、無効な指示では状態を変えずfalseを返す。
+
+            if (!IsConfigured || state == null || request == null)
+            {
+                return false;
+            }
+
+            if (state.IsFinished || state.TurnNumber < 1)
+            {
+                return false;
+            }
+
+            if (!IsValidCombatant(state.FirstCombatant, BattleSide.First)
+                || !IsValidCombatant(state.SecondCombatant, BattleSide.Second))
+            {
+                return false;
+            }
+
+            if (state.ActionSide != BattleSide.First
+                && state.ActionSide != BattleSide.Second)
+            {
+                return false;
+            }
+
+            if (request.Actor != state.ActionSide
+                || request.TurnNumber != state.TurnNumber)
+            {
+                return false;
+            }
+
+            if (request.Command != BattleCommand.Attack
+                && request.Command != BattleCommand.Heal)
+            {
+                return false;
+            }
+
+            return _commandData.TryGetValue(request.Command, out commandData);
+
             // TODO LESSON01-06C: 第1回・3コマ目で回復も受け付けるよう、技の判定を広げる。
             // _commandDataから指示されたコマンドのマスタを取得する。
             // 前半はAttackだけ許可し、第3コマの課題で回復を追加する。防御・チャージ・必殺技は第6回。
@@ -159,18 +240,31 @@ namespace TF.Battle.Rules
         }
 
         /// <summary>
-        /// 防御による軽減を適用し、ダメージを受けた後の状態を作成
+        /// 通常攻撃後のHPを0以上にし、新しい状態を返す
         /// </summary>
         private static CombatantState ApplyDamage(CombatantState target, int damage, int guardDamageDivisor)
         {
-            // TODO LESSON01-01B: マスタのdamageをHPから引き、下限を0にする。
-            // 第1回・1コマ目: Math.MaxでHPを0以上にし、CopyCombatantへ計算後のHPを渡す。
-            // エネルギー・防御状態・Side・最大値は引き継ぐ。
-            // CopyCombatantでHP以外を引き継いだ新しい状態を返す。
+            // ダメージを受けた後のHP。マスタ側でdamageは0以上であることを確認済み。
+            int nextHp = Math.Max(0, target.Hp - damage);
+            return CopyCombatant(
+                target, nextHp, target.Energy, target.IsGuarding);
+
             // TODO LESSON06-03: 防御中はguardDamageDivisorで整数除算してから適用する。
             // 第6回・1コマ目: 防御中だけdamageを除数で割り、端数を切り捨ててからHPへ適用する。
             return target;
         }
+
+        /// <summary>
+        /// 最大HPを超えないように回復し、新しい状態を作る。
+        /// </summary>
+        private static CombatantState ApplyRecovery (CombatantState actor, int amount)
+        {
+            // 加算途中でintの上限を超えないよう、longで計算する。
+            long calculatedHp = (long)actor.Hp + amount;
+            int nextHp = (int)Math.Min((long)actor.MaxHp, calculatedHp);
+            return CopyCombatant(actor, nextHp, actor.Energy, actor.IsGuarding);
+        }
+
 
         /// <summary>
         /// キャラクターを区別する値と最大値を引き継ぎ、指定された値で状態を作成
