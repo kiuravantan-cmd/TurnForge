@@ -258,8 +258,12 @@ namespace TF.UI.Battle
         /// </summary>
         private void NotifySelection(BattleCommand command)
         {
-            // TODO LESSON02-06: 有効な選択操作をCommandSelectedへ通知する。
-            // 第2回・2コマ目: Viewが有効・入力受付中・使用可能な技の場合だけ通知する。
+            if (!isActiveAndEnabled || !_isInputEnabled || !_availableCommands.Contains(command))
+            {
+                return;
+            }
+
+            CommandSelected?.Invoke(command);
         }
 
         /// <summary>
@@ -267,8 +271,13 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleConfirm()
         {
-            // TODO LESSON02-07: 有効な決定操作をConfirmRequestedへ通知する。
-            // 第2回・2コマ目: 入力受付中・選択あり・選択した技が使用可能な場合だけ通知する。
+            if (!isActiveAndEnabled || !_isInputEnabled || 
+                !_selectedCommand.HasValue || !_availableCommands.Contains(_selectedCommand.Value))
+            {
+                return;
+            }
+
+            ConfirmRequested?.Invoke();
         }
 
         /// <summary>
@@ -276,8 +285,12 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleCancel()
         {
-            // TODO LESSON02-08: 有効な取消操作をCancelRequestedへ通知する。
-            // 第2回・2コマ目: 入力受付中・選択ありの場合だけ通知する。取消に技の使用可否は要求しない。
+            if (!isActiveAndEnabled || !_isInputEnabled || !_selectedCommand.HasValue)
+            {
+                return;
+            }
+
+            CancelRequested?.Invoke();
         }
 
         /// <summary>
@@ -290,6 +303,15 @@ namespace TF.UI.Battle
             // 第2回・2コマ目: null・使用済み・無効なView・入力停止・未選択を拒否する。
             // 有効な取消はUseで使用済みにしてからHandleCancelへ渡し、二重通知を防ぐ。
             // 無効・処理済みのイベントを拒否し、有効なら消費する。
+            if (eventData == null || eventData.used ||
+                !isActiveAndEnabled || !_isInputEnabled || !_selectedCommand.HasValue)
+            {
+                return;
+            }
+
+            // イベントを使用済みにして、他のUIに伝播しないようにする
+            eventData.Use();
+            HandleCancel();
         }
 
         /// <summary>
