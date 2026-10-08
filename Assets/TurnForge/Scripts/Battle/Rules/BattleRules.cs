@@ -77,7 +77,7 @@ namespace TF.Battle.Rules
         }
 
         /// <summary>
-        /// 通常攻撃を計算し、変更前後の戦闘状態を返す
+        /// 通常攻撃または回復を処理し、次の戦闘状態を作る。
         /// </summary>
         public bool TryExecute(BattleState currentState, BattleActionRequest request, out BattleResult result)
         {
@@ -92,9 +92,20 @@ namespace TF.Battle.Rules
             CombatantState target = GetCombatant(
                 currentState, GetOpponentSide(request.Actor));
 
-            // 第1回は防御による軽減を行わない。
-            CombatantState nextTarget = ApplyDamage(
-                target, commandData.Damage, 1);
+            CombatantState nexatActor = actor;
+            CombatantState nextTarget = target;
+
+            switch (request.Command)
+            {
+                case BattleCommand.Attack:
+                    nextTarget = ApplyDamage(target, commandData.Damage, 1);
+                    break;
+                case BattleCommand.Heal:
+                    nexatActor = ApplyRecovery(actor, commandData.Recovery);
+                    break;
+                default:
+                    return false;
+            }
 
             // 相手のHPが0になったか。
             bool isFinished = nextTarget.IsDefeated;
@@ -117,9 +128,9 @@ namespace TF.Battle.Rules
 
             // 攻撃側にかかわらず、キャラクターをFirst、Secondの順に並べる。
             CombatantState nextFirst =
-                request.Actor == BattleSide.First ? actor : nextTarget;
+                request.Actor == BattleSide.First ? nexatActor : nextTarget;
             CombatantState nextSecond =
-                request.Actor == BattleSide.Second ? actor : nextTarget;
+                request.Actor == BattleSide.Second ? nexatActor : nextTarget;
 
             // 次の時点の戦闘状態。
             BattleState nextState = new BattleState(
@@ -176,8 +187,8 @@ namespace TF.Battle.Rules
                 return false;
             }
 
-            // 必須部分は通常攻撃のみ。回復は応用課題で追加する。
-            if (request.Command != BattleCommand.Attack)
+            if (request.Command != BattleCommand.Attack
+                && request.Command != BattleCommand.Heal)
             {
                 return false;
             }
@@ -242,6 +253,18 @@ namespace TF.Battle.Rules
             // 第6回・1コマ目: 防御中だけdamageを除数で割り、端数を切り捨ててからHPへ適用する。
             return target;
         }
+
+        /// <summary>
+        /// 最大HPを超えないように回復し、新しい状態を作る。
+        /// </summary>
+        private static CombatantState ApplyRecovery (CombatantState actor, int amount)
+        {
+            // 加算途中でintの上限を超えないよう、longで計算する。
+            long calculatedHp = (long)actor.Hp + amount;
+            int nextHp = (int)Math.Min((long)actor.MaxHp, calculatedHp);
+            return CopyCombatant(actor, nextHp, actor.Energy, actor.IsGuarding);
+        }
+
 
         /// <summary>
         /// キャラクターを区別する値と最大値を引き継ぎ、指定された値で状態を作成

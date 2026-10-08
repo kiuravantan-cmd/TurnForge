@@ -9,7 +9,7 @@ namespace TF.Battle.AI
     public sealed class AttackOnlyCommandSelector : IBattleCommandSelector
     {
         /// <summary>
-        /// 継続中の自分の番なら、通常攻撃を選ぶ
+        /// 自分のHPが半分以下なら回復、それ以外は通常攻撃を選ぶ。
         /// </summary>
         public bool TrySelectCommand(BattleState state, BattleSide actor, out BattleCommand command)
         {
@@ -30,8 +30,16 @@ namespace TF.Battle.AI
                 return false;
             }
 
-            command = BattleCommand.Attack;
+            // 行動する側の状態。CPUをSecondに固定せず、actorから選ぶ。
+            CombatantState self = actor == BattleSide.First ? state.FirstCombatant : state.SecondCombatant;
+            if (self == null || self.MaxHp <= 0 || self.Hp <= 0 || self.Hp > self.MaxHp)
+            {
+                return false;
+            }
+
+            command = self.Hp <= self.MaxHp / 2 ? BattleCommand.Heal : BattleCommand.Attack;
             return true;
+
 
             // TODO LESSON05-01: このインターフェースを使う別のCPU判断を追加し、DIで差し替える。
             // 第5回・1/4コマ目: IBattleCommandSelectorを実装した別クラスを追加する。
