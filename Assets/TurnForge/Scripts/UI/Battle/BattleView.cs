@@ -2,6 +2,7 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using TF.Battle.Commands;
 using TF.Battle.Models;
 using TMPro;
@@ -189,7 +190,7 @@ namespace TF.UI.Battle
             RefreshButtons();
         }
 
-        public UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token)
+        public async UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token)
         {
             if (!token.IsCancellationRequested && result?.NextState != null)
             {
@@ -202,7 +203,7 @@ namespace TF.UI.Battle
             // 第6回・2コマ目: 必要なDOTween・UniTaskで演出完了を待ち、終了時はtokenで中断する。
             // 演出の前に結果は確定済み。中断でHP・エネルギー・番を巻き戻さない。
             // 結果は確定済みのため、演出が中断されても戦闘状態を巻き戻さない。
-            return UniTask.CompletedTask;
+            await UniTask.Delay(TimeSpan.FromSeconds(2), cancellationToken: token);
         }
 
         /// <summary>
