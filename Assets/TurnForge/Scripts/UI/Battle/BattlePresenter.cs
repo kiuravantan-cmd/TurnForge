@@ -139,7 +139,7 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleConfirmRequested()
         {
-            if (!CanAcceptPlayerInput || _selectedCommand.HasValue)
+            if (!CanAcceptPlayerInput || !_selectedCommand.HasValue)
             {
                 return;
             }

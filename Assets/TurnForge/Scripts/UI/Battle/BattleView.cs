@@ -49,6 +49,11 @@ namespace TF.UI.Battle
         [SerializeField] private Button _attackButton;
 
         /// <summary>
+        /// 回復コマンドボタン
+        /// </summary>
+        [SerializeField] private Button _healButton;
+
+        /// <summary>
         /// 防御コマンドボタン
         /// </summary>
         [SerializeField] private Button _guardButton;
@@ -206,6 +211,7 @@ namespace TF.UI.Battle
         private void RefreshButtons()
         {
             SetInteractable(_attackButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Attack));
+            SetInteractable(_healButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Heal));
             SetInteractable(_guardButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Guard));
             SetInteractable(_chargeButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Charge));
             SetInteractable(_specialButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Special));
@@ -226,6 +232,7 @@ namespace TF.UI.Battle
         private void SetButtonListeners(bool subscribe)
         {
             SetListener(_attackButton, HandleAttack, subscribe);
+            SetListener(_healButton, HandleHeal, subscribe);
             SetListener(_guardButton, HandleGuard, subscribe);
             SetListener(_chargeButton, HandleCharge, subscribe);
             SetListener(_specialButton, HandleSpecial, subscribe);
@@ -237,6 +244,11 @@ namespace TF.UI.Battle
         /// 攻撃の選択を通知
         /// </summary>
         private void HandleAttack() => NotifySelection(BattleCommand.Attack);
+
+        /// <summary>
+        /// 回復の選択を通知
+        /// </summary>
+        private void HandleHeal () => NotifySelection(BattleCommand.Heal);
 
         /// <summary>
         /// 防御の選択を通知
@@ -337,6 +349,7 @@ namespace TF.UI.Battle
             return command switch
             {
                 BattleCommand.Attack => "攻撃",
+                BattleCommand.Heal => "回復",
                 BattleCommand.Guard => "防御",
                 BattleCommand.Charge => "チャージ",
                 BattleCommand.Special => "必殺技",
@@ -358,7 +371,7 @@ namespace TF.UI.Battle
         /// <summary>
         /// ボタンが設定されている場合に操作できるかどうかを更新
         /// </summary>
-        private static void SetInteractable (Button button, bool interactable)
+        private static void SetInteractable(Button button, bool interactable)
         {
             if (button != null)
             {

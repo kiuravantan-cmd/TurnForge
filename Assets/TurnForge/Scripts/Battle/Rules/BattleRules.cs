@@ -271,13 +271,11 @@ namespace TF.Battle.Rules
         /// </summary>
         private static CombatantState CopyCombatant(CombatantState source, int hp, int energy, bool isGuarding)
         {
-            // TODO LESSON01-01A: sourceのSide・MaxHp・MaxEnergyを引き継ぐ。
-            // 第1回・1コマ目: 引数のhp・energy・isGuardingで新しいCombatantStateを作る。
             // TODO LESSON01-06A: 第1回・3コマ目で回復用メソッドをこのクラスへ追加する。
             // 自分の状態とマスタの回復量を受け取り、MaxHpを超えないHPでCopyCombatantする。
             // 講師準備: 回復コマンド・回復量のマスタ・授業用入力口を先に用意する。
             // hp・energy・isGuardingは引数の値を使い、新しいCombatantStateを返す。
-            return source;
+            return new CombatantState(source.Side, hp, source.MaxHp, energy, source.MaxEnergy, isGuarding);
         }
     }
 }
