@@ -152,6 +152,15 @@ namespace TF.Composition
         /// </summary>
         private BattleRecordService _battleRecordService;
 
+        /// <summary>途中のバトルの保存と復元。</summary>
+        private BattleSessionService _battleSessionService;
+
+        /// <summary>現在のバトルで使う1人目のマスタID。</summary>
+        private ulong _activeFirstCombatantId;
+
+        /// <summary>現在のバトルで使う2人目のマスタID。</summary>
+        private ulong _activeSecondCombatantId;
+
         /// <summary>
         /// 現在のゲーム全体の状態
         /// </summary>
@@ -315,6 +324,13 @@ namespace TF.Composition
                 return;
             }
 
+            // 途中の保存データを先に読み、失敗時は上書きを防ぐ。
+            if (!TryInitializeBattleSession())
+            {
+                _gameFlow.TryFailStartup();
+                return;
+            }
+
             // 戦績を読み込んでからゲームの準備を進める
             if (!TryInitializeBattleRecord())
             {
@@ -390,15 +406,20 @@ namespace TF.Composition
                 return false;
             }
             
-            if (!accessor.TryGetById(_firstCombatantId, out BattleCombatantDataRecord firstCombatant))
+            // 再開可能な保存データがあれば、そのバトルを選ぶ。
+            bool shouldResume = _battleSessionService != null && _battleSessionService.HasResumeData;
+            ulong firstId = shouldResume ? _battleSessionService.CurrentData.FirstCombatantId : _firstCombatantId;
+            ulong secondId = shouldResume ? _battleSessionService.CurrentData.SecondCombatantId : _secondCombatantId;
+
+            if (!accessor.TryGetById(firstId, out BattleCombatantDataRecord firstCombatant))
             {
-                Debug.LogError($"参加者マスタがありません：ID {_firstCombatantId}", this);
+                Debug.LogError($"参加者マスタがありません：ID {firstId}", this);
                 return false;
             }
 
-            if (!accessor.TryGetById(_secondCombatantId, out BattleCombatantDataRecord secondCombatant))
+            if (!accessor.TryGetById(secondId, out BattleCombatantDataRecord secondCombatant))
             {
-                Debug.LogError($"参加者マスタがありません：ID {_secondCombatantId}", this);
+                Debug.LogError($"参加者マスタがありません：ID {secondId}", this);
                 return false;
             }
             
@@ -409,6 +430,16 @@ namespace TF.Composition
                 Debug.LogError("参加者マスタの初期能力が不正です。", this);
                 return false;
             }
+
+            // マスタで最大値を用意してから、保存したHPなどを戻す。
+            if (shouldResume && !_battleSessionService.TryRestore(initialState, firstId, secondId, out initialState))
+            {
+                Debug.LogError("途中のバトルを復元できませんでした。保存データは上書きしません。", this);
+                return false;
+            }
+
+            _activeFirstCombatantId = firstId;
+            _activeSecondCombatantId = secondId;
 
             // コマンドマスタを使用する戦闘ルール
             var rules = new BattleRules(accessor.GetAll<BattleCommandDataRecord>());
@@ -432,6 +463,7 @@ namespace TF.Composition
             // オフラインではFirstをプレイヤーの操作側にする
             _battlePresenter = new BattlePresenter(_battleView, _battleModel, _battleFlow, BattleSide.First);
             _battlePresenter.BattleFinished += HandleBattleFinised;
+            _battlePresenter.PlayerTurnReady += HandlePlayerTurnReady;
 
             if (!_battlePresenter.TryInitialize())
             {
@@ -523,6 +555,9 @@ namespace TF.Composition
                 return false;
             }
 
+            // 開始・再開できた時点を、最初の保存の区切りにする。
+            HandlePlayerTurnReady(_battleModel.CurrentState);
+
             // 戦闘画面への遷移後に、CPUの行動を許可する
             _battleCpu.SetEnabled(true);
 
@@ -570,6 +605,7 @@ namespace TF.Composition
             if (_battlePresenter != null)
             {
                 _battlePresenter.BattleFinished -= HandleBattleFinised;
+                _battlePresenter.PlayerTurnReady -= HandlePlayerTurnReady;
                 _battlePresenter.Dispose();
                 _battlePresenter = null;
             }
@@ -604,6 +640,13 @@ namespace TF.Composition
             if (!_gameFlow.TryShowResult())
             {
                 Debug.LogError("結果画面へ遷移できませんでした。", this);
+            }
+
+            // 終了したバトルは再開対象から外す。古い途中データを消す代わりに終了を保存する。
+            if (_battleSessionService != null
+                && _battleSessionService.TryCapture(state, _activeFirstCombatantId, _activeSecondCombatantId))
+            {
+                SaveBattleSessionIfNeeded();
             }
 
             // プレイヤー視点の結果を戦績へ加算する。
@@ -734,11 +777,61 @@ namespace TF.Composition
             }
         }
 
+        /// <summary>保存先を組み立て、途中のバトルの読み込みを行う。</summary>
+        private bool TryInitializeBattleSession()
+        {
+            string directoryPath = Path.Combine(Application.persistentDataPath, "Saves");
+            ISaveStorage storage = new JsonFileSaveStorage(directoryPath);
+            _battleSessionService = new BattleSessionService(storage);
+            if (!_battleSessionService.TryLoad())
+            {
+                Debug.LogError("途中のバトルを読み込めませんでした。既存データの上書きを防ぐため起動を中止します。", this);
+                return false;
+            }
+
+            Debug.Log(_battleSessionService.HasResumeData
+                ? "途中のバトルがあります。開始ボタンで続きから遊べます。"
+                : "新しいバトルを開始します。", this);
+            return true;
+        }
+
+        /// <summary>演出の終わった、自分の番の状態を保存する。</summary>
+        private void HandlePlayerTurnReady(BattleState state)
+        {
+            if (_isReleased || CurrentState != GameState.Battle || _battleSessionService == null
+                || _battleFlow == null || !_battleFlow.CanAcceptInput || state == null
+                || state.IsFinished || state.ActionSide != BattleSide.First
+                || !ReferenceEquals(state, _battleModel?.CurrentState))
+            {
+                return;
+            }
+
+            if (_battleSessionService.TryCapture(state, _activeFirstCombatantId, _activeSecondCombatantId))
+            {
+                SaveBattleSessionIfNeeded();
+            }
+        }
+
+        /// <summary>失敗時は変更を保持し、次の保存機会に再試行する。</summary>
+        private void SaveBattleSessionIfNeeded()
+        {
+            if (_battleSessionService == null || !_battleSessionService.HasUnsavedChanges)
+            {
+                return;
+            }
+
+            if (!_battleSessionService.TrySave())
+            {
+                Debug.LogWarning("途中のバトルを保存できませんでした。変更を保持し、次の保存機会に再試行します。", this);
+            }
+        }
+
         /// <summary>
         /// 破棄時に所有するリソースを解放
         /// </summary>
         private void OnDestroy()
         {
+            SaveBattleSessionIfNeeded();
             SaveBattleRecordIfNeeded();
             Release();
         }
