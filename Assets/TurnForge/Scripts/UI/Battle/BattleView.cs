@@ -2,6 +2,7 @@ using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Threading;
+using System.Threading.Tasks;
 using TF.Battle.Commands;
 using TF.Battle.Models;
 using TMPro;
@@ -47,6 +48,11 @@ namespace TF.UI.Battle
         /// 攻撃コマンドボタン
         /// </summary>
         [SerializeField] private Button _attackButton;
+
+        /// <summary>
+        /// 回復コマンドボタン
+        /// </summary>
+        [SerializeField] private Button _healButton;
 
         /// <summary>
         /// 防御コマンドボタン
@@ -184,7 +190,7 @@ namespace TF.UI.Battle
             RefreshButtons();
         }
 
-        public UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token)
+        public async UniTask PlayResultAsync(BattleResult result, string message, CancellationToken token)
         {
             if (!token.IsCancellationRequested && result?.NextState != null)
             {
@@ -197,7 +203,7 @@ namespace TF.UI.Battle
             // 第6回・2コマ目: 必要なDOTween・UniTaskで演出完了を待ち、終了時はtokenで中断する。
             // 演出の前に結果は確定済み。中断でHP・エネルギー・番を巻き戻さない。
             // 結果は確定済みのため、演出が中断されても戦闘状態を巻き戻さない。
-            return UniTask.CompletedTask;
+            await UniTask.Delay(TimeSpan.FromSeconds(2), cancellationToken: token);
         }
 
         /// <summary>
@@ -206,6 +212,7 @@ namespace TF.UI.Battle
         private void RefreshButtons()
         {
             SetInteractable(_attackButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Attack));
+            SetInteractable(_healButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Heal));
             SetInteractable(_guardButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Guard));
             SetInteractable(_chargeButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Charge));
             SetInteractable(_specialButton, _isInputEnabled && _availableCommands.Contains(BattleCommand.Special));
@@ -226,6 +233,7 @@ namespace TF.UI.Battle
         private void SetButtonListeners(bool subscribe)
         {
             SetListener(_attackButton, HandleAttack, subscribe);
+            SetListener(_healButton, HandleHeal, subscribe);
             SetListener(_guardButton, HandleGuard, subscribe);
             SetListener(_chargeButton, HandleCharge, subscribe);
             SetListener(_specialButton, HandleSpecial, subscribe);
@@ -237,6 +245,11 @@ namespace TF.UI.Battle
         /// 攻撃の選択を通知
         /// </summary>
         private void HandleAttack() => NotifySelection(BattleCommand.Attack);
+
+        /// <summary>
+        /// 回復の選択を通知
+        /// </summary>
+        private void HandleHeal () => NotifySelection(BattleCommand.Heal);
 
         /// <summary>
         /// 防御の選択を通知
@@ -258,8 +271,12 @@ namespace TF.UI.Battle
         /// </summary>
         private void NotifySelection(BattleCommand command)
         {
-            // TODO LESSON02-06: 有効な選択操作をCommandSelectedへ通知する。
-            // 第2回・2コマ目: Viewが有効・入力受付中・使用可能な技の場合だけ通知する。
+            if (!isActiveAndEnabled || !_isInputEnabled || !_availableCommands.Contains(command))
+            {
+                return;
+            }
+
+            CommandSelected?.Invoke(command);
         }
 
         /// <summary>
@@ -267,8 +284,13 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleConfirm()
         {
-            // TODO LESSON02-07: 有効な決定操作をConfirmRequestedへ通知する。
-            // 第2回・2コマ目: 入力受付中・選択あり・選択した技が使用可能な場合だけ通知する。
+            if (!isActiveAndEnabled || !_isInputEnabled || 
+                !_selectedCommand.HasValue || !_availableCommands.Contains(_selectedCommand.Value))
+            {
+                return;
+            }
+
+            ConfirmRequested?.Invoke();
         }
 
         /// <summary>
@@ -276,8 +298,12 @@ namespace TF.UI.Battle
         /// </summary>
         private void HandleCancel()
         {
-            // TODO LESSON02-08: 有効な取消操作をCancelRequestedへ通知する。
-            // 第2回・2コマ目: 入力受付中・選択ありの場合だけ通知する。取消に技の使用可否は要求しない。
+            if (!isActiveAndEnabled || !_isInputEnabled || !_selectedCommand.HasValue)
+            {
+                return;
+            }
+
+            CancelRequested?.Invoke();
         }
 
         /// <summary>
@@ -290,6 +316,15 @@ namespace TF.UI.Battle
             // 第2回・2コマ目: null・使用済み・無効なView・入力停止・未選択を拒否する。
             // 有効な取消はUseで使用済みにしてからHandleCancelへ渡し、二重通知を防ぐ。
             // 無効・処理済みのイベントを拒否し、有効なら消費する。
+            if (eventData == null || eventData.used ||
+                !isActiveAndEnabled || !_isInputEnabled || !_selectedCommand.HasValue)
+            {
+                return;
+            }
+
+            // イベントを使用済みにして、他のUIに伝播しないようにする
+            eventData.Use();
+            HandleCancel();
         }
 
         /// <summary>
@@ -315,6 +350,7 @@ namespace TF.UI.Battle
             return command switch
             {
                 BattleCommand.Attack => "攻撃",
+                BattleCommand.Heal => "回復",
                 BattleCommand.Guard => "防御",
                 BattleCommand.Charge => "チャージ",
                 BattleCommand.Special => "必殺技",
@@ -336,7 +372,7 @@ namespace TF.UI.Battle
         /// <summary>
         /// ボタンが設定されている場合に操作できるかどうかを更新
         /// </summary>
-        private static void SetInteractable (Button button, bool interactable)
+        private static void SetInteractable(Button button, bool interactable)
         {
             if (button != null)
             {

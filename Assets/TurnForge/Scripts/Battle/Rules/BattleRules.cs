@@ -195,9 +195,6 @@ namespace TF.Battle.Rules
 
             return _commandData.TryGetValue(request.Command, out commandData);
 
-            // TODO LESSON01-06C: 第1回・3コマ目で回復も受け付けるよう、技の判定を広げる。
-            // _commandDataから指示されたコマンドのマスタを取得する。
-            // 前半はAttackだけ許可し、第3コマの課題で回復を追加する。防御・チャージ・必殺技は第6回。
             // TODO LESSON06-02: 技のコスト不足・チャージ上限を確認する。
             // 第6回・1コマ目: マスタのコスト以上のエネルギーがあるかを調べる。
             // エネルギー最大時のチャージを拒否し、ターン開始時の防御解除と条件をそろえる。
@@ -271,13 +268,11 @@ namespace TF.Battle.Rules
         /// </summary>
         private static CombatantState CopyCombatant(CombatantState source, int hp, int energy, bool isGuarding)
         {
-            // TODO LESSON01-01A: sourceのSide・MaxHp・MaxEnergyを引き継ぐ。
-            // 第1回・1コマ目: 引数のhp・energy・isGuardingで新しいCombatantStateを作る。
             // TODO LESSON01-06A: 第1回・3コマ目で回復用メソッドをこのクラスへ追加する。
             // 自分の状態とマスタの回復量を受け取り、MaxHpを超えないHPでCopyCombatantする。
             // 講師準備: 回復コマンド・回復量のマスタ・授業用入力口を先に用意する。
             // hp・energy・isGuardingは引数の値を使い、新しいCombatantStateを返す。
-            return source;
+            return new CombatantState(source.Side, hp, source.MaxHp, energy, source.MaxEnergy, isGuarding);
         }
     }
 }
