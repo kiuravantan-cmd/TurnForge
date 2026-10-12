@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using TF.Battle.Commands;
 using TF.Battle.Models;
 
@@ -81,6 +81,10 @@ namespace TF.UI.Battle
                 case BattleCommand.Special:
                     message.Append($"{actorName}の必殺技！");
                     break;
+                
+                case BattleCommand.Heal:
+                    message.Append($"{actorName}は回復した。");
+                    break;
 
                 default:
                     return string.Empty;
@@ -109,6 +113,12 @@ namespace TF.UI.Battle
             else if (energyChange < 0)
             {
                 message.Append($"\n{actorName}のエネルギーが{-energyChange}減少。");
+            }
+            
+            int hpRecovery = nextActor.Hp - previousActor.Hp;
+            if (hpRecovery > 0)
+            {
+                message.Append($"\n{actorName}のHPが{hpRecovery}回復。");
             }
 
             return message.ToString();
