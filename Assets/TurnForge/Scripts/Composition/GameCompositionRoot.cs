@@ -153,6 +153,21 @@ namespace TF.Composition
         private BattleRecordService _battleRecordService;
 
         /// <summary>
+        /// 途中のバトルの保存と復元
+        /// </summary>
+        private BattleSessionService _battleSessionService;
+
+        /// <summary>
+        /// 現在のバトルで使う1人目のマスタID
+        /// </summary>
+        private ulong _activeFirstCombatantId;
+        
+        /// <summary>
+        /// 現在のバトルで使う2人目のマスタID
+        /// </summary>
+        private ulong _activeSecondCombatantId;
+
+        /// <summary>
         /// 現在のゲーム全体の状態
         /// </summary>
         public GameState CurrentState => _gameFlow?.CurrentState ?? GameState.Inactive;
@@ -326,10 +341,11 @@ namespace TF.Composition
                 return;
             }
 
-            // TODO LESSON03-07: セーブ機能完成後、読み込みと失敗時の扱いを接続する。
-            // 第3回・2コマ目: 読み込み完了後に新規開始・再開・失敗時の案内を切り替える。
-            // 未保存と破損を区別し、破損データは保護したうえで新規開始を選べるようにする。
-            // 配布時は保存を呼び出さず、タイトルへ進める。
+            if (!TryInitializeBattleSession())
+            {
+                _gameFlow.TryFailStartup();
+                return;
+            }
 
             // マスタ読み込みと戦闘作成の結果
             bool succeeded = await LoadMasterDataAsync();
@@ -408,16 +424,20 @@ namespace TF.Composition
             {
                 return false;
             }
+
+            bool shouldResume = _battleSessionService != null && _battleSessionService.HasResumeData;
+            ulong firstId = shouldResume ? _battleSessionService.CurrentData.FirstCombatantId : _firstCombatantId;
+            ulong secondId = shouldResume ? _battleSessionService.CurrentData.FirstCombatantId : _secondCombatantId;
             
-            if (!accessor.TryGetById(_firstCombatantId, out BattleCombatantDataRecord firstCombatant))
+            if (!accessor.TryGetById(firstId, out BattleCombatantDataRecord firstCombatant))
             {
-                Debug.LogError($"参加者マスタがありません：ID {_firstCombatantId}", this);
+                Debug.LogError($"参加者マスタがありません：ID {firstId}", this);
                 return false;
             }
 
-            if (!accessor.TryGetById(_secondCombatantId, out BattleCombatantDataRecord secondCombatant))
+            if (!accessor.TryGetById(secondId, out BattleCombatantDataRecord secondCombatant))
             {
-                Debug.LogError($"参加者マスタがありません：ID {_secondCombatantId}", this);
+                Debug.LogError($"参加者マスタがありません：ID {secondId}", this);
                 return false;
             }
             
@@ -428,6 +448,15 @@ namespace TF.Composition
                 Debug.LogError("参加者マスタの初期能力が不正です。", this);
                 return false;
             }
+
+            if (shouldResume && !_battleSessionService.TryRestore(initialState, firstId, secondId, out initialState))
+            {
+                Debug.LogError("途中のバトルを復元できませんでした。保存データは復元できません。", this);
+                return false;
+            }
+
+            _activeFirstCombatantId = firstId;
+            _activeSecondCombatantId = secondId;
 
             // コマンドマスタを使用する戦闘ルール
             var rules = new BattleRules(accessor.GetAll<BattleCommandDataRecord>());
@@ -711,6 +740,26 @@ namespace TF.Composition
             // 第3回・3コマ目: 戦闘途中の保存は次のターン開始時など、結果が確定した区切りへ接続する。
             // オンラインの途中状態をローカル保存から単独で復元する処理は追加しない。
             // 戦闘途中の保存はターン開始時に接続し、演出途中では保存しない。
+        }
+
+        /// <summary>
+        /// 保存先を組み立て、途中のバトルの読み込みを行う
+        /// </summary>
+        private bool TryInitializeBattleSession()
+        {
+            string directoryPath = Path.Combine(Application.persistentDataPath, "Saves");
+            ISaveStorage storage = new JsonFileSaveStorage(directoryPath);
+            _battleSessionService = new BattleSessionService(storage);
+            if (!_battleSessionService.TryLoad())
+            {
+                Debug.LogError("途中のバトルを読み込めませんでした。既存データの上書きを防ぐため起動を中止します。", this);
+                return false;
+            }
+            
+            Debug.Log(_battleSessionService.HasResumeData
+            ? "途中のバトルがあります。開始ボタンで続きから遊べます。"
+            : "新しいバトルを開始します。", this);
+            return true;
         }
 
         /// <summary>

@@ -88,11 +88,35 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TryRestore(BattleState initialState, ulong firstId, ulong secondId, out BattleState state)
         {
-            // 第3回・2コマ目のライブコーディングで、この関数全体を実装する。
-            // 保存した値とマスタの最大値からBattleStateを作る。
             // 4コマ目の課題4で、マスタの最大値を超える値を拒否する条件を追加する。
             state = null;
-            return false;
+            if (!IsInitialized || !HasResumeData)
+            {
+                return false;
+            }
+
+            if (initialState?.FirstCombatant == null || initialState.SecondCombatant == null)
+            {
+                return false;
+            }
+
+            if (!IsValidData(CurrentData) ||
+                CurrentData.FirstCombatantId != firstId || CurrentData.FirstCombatantId != secondId)
+            {
+                return false;
+            }
+            
+            // 最大値はJSONではなく、今のマスタから取得
+            CombatantState first = initialState.FirstCombatant;
+            CombatantState second = initialState.SecondCombatant;
+            
+            state = new BattleState(
+                new CombatantState(BattleSide.First, CurrentData.FirstHp, first.MaxHp,
+                    CurrentData.FirstEnergy, first.MaxEnergy, CurrentData.FirstIsGuarding),
+                new CombatantState(BattleSide.Second, CurrentData.SecondHp, second.MaxHp,
+                    CurrentData.SecondEnergy, second.MaxEnergy, CurrentData.SecondIsGuarding),
+                CurrentData.ActionSide, CurrentData.TurnNumber, false);
+            return true;
         }
 
         /// <summary>
