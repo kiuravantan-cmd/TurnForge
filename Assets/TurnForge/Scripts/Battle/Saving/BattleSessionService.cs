@@ -100,9 +100,20 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TryCapture(BattleState state, ulong firstId, ulong secondId)
         {
-            // 第3回・1コマ目のライブコーディングで、この関数全体を実装する。
-            // 状態を保存用データへ写し、未保存の印を付ける。
-            return false;
+            if (!IsInitialized || state?.FirstCombatant == null || state.SecondCombatant == null)
+            {
+                return false;
+            }
+            
+            var data = new BattleSessionSaveData(state, firstId, secondId);
+            if (!IsValidData(data))
+            {
+                return false;
+            }
+            
+            CurrentData = data;
+            HasUnsavedChanges = true;
+            return true;
         }
 
         /// <summary>
@@ -110,9 +121,23 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TrySave()
         {
-            // 第3回・1コマ目のライブコーディングで、この関数全体を実装する。
-            // 保存に成功した場合だけ、未保存の印を下ろす。
-            return false;
+            if (_storage == null || !IsInitialized)
+            {
+                return false;
+            }
+
+            if (!HasUnsavedChanges)
+            {
+                return false;
+            }
+
+            if (!IsValidData(CurrentData) || !_storage.TrySave(SaveKey, CurrentData))
+            {
+                return false;
+            }
+            
+            HasUnsavedChanges = false;
+            return true;
         }
 
         /// <summary>
