@@ -1,4 +1,4 @@
-using Cysharp.Threading.Tasks;
+﻿using Cysharp.Threading.Tasks;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -66,6 +66,11 @@ namespace TF.UI.Battle
         /// 最後の演出まで完了した戦闘状態を通知
         /// </summary>
         public event UnityAction<BattleState> BattleFinished;
+
+        /// <summary>
+        /// 演出後に自分の入力の受け付ける番になった通知
+        /// </summary>
+        public event UnityAction<BattleState> PlayerTurnReady;
 
         /// <summary>
         /// プレイヤーからの操作を受け付けられるか
@@ -225,6 +230,10 @@ namespace TF.UI.Battle
             {
                 BattleFinished?.Invoke(_model.CurrentState);
             }
+            else if (CanAcceptPlayerInput)
+            {
+                PlayerTurnReady?.Invoke(_model.CurrentState);
+            }
 
             // falseでも、成立済みの行動は巻き戻さない
             return !canceled;
@@ -300,6 +309,7 @@ namespace TF.UI.Battle
             }
 
             BattleFinished = null;
+            PlayerTurnReady = null;
         }
     }
 }

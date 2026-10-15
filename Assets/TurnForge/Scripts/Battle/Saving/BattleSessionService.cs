@@ -101,7 +101,7 @@ namespace TF.Battle.Saving
             }
 
             if (!IsValidData(CurrentData) ||
-                CurrentData.FirstCombatantId != firstId || CurrentData.FirstCombatantId != secondId)
+                CurrentData.FirstCombatantId != firstId || CurrentData.SecondCombatantId != secondId)
             {
                 return false;
             }
@@ -152,7 +152,7 @@ namespace TF.Battle.Saving
 
             if (!HasUnsavedChanges)
             {
-                return false;
+                return true;
             }
 
             if (!IsValidData(CurrentData) || !_storage.TrySave(SaveKey, CurrentData))

@@ -427,7 +427,7 @@ namespace TF.Composition
 
             bool shouldResume = _battleSessionService != null && _battleSessionService.HasResumeData;
             ulong firstId = shouldResume ? _battleSessionService.CurrentData.FirstCombatantId : _firstCombatantId;
-            ulong secondId = shouldResume ? _battleSessionService.CurrentData.FirstCombatantId : _secondCombatantId;
+            ulong secondId = shouldResume ? _battleSessionService.CurrentData.SecondCombatantId : _secondCombatantId;
             
             if (!accessor.TryGetById(firstId, out BattleCombatantDataRecord firstCombatant))
             {
@@ -451,7 +451,7 @@ namespace TF.Composition
 
             if (shouldResume && !_battleSessionService.TryRestore(initialState, firstId, secondId, out initialState))
             {
-                Debug.LogError("途中のバトルを復元できませんでした。保存データは復元できません。", this);
+                Debug.LogError("途中のバトルを復元できませんでした。保存データは上書きしません。", this);
                 return false;
             }
 
@@ -479,7 +479,8 @@ namespace TF.Composition
 
             // オフラインではFirstをプレイヤーの操作側にする
             _battlePresenter = new BattlePresenter(_battleView, _battleModel, _battleFlow, BattleSide.First);
-            _battlePresenter.BattleFinished += HandleBattleFinised;
+            _battlePresenter.BattleFinished += HandleBattleFinished;
+            _battlePresenter.PlayerTurnReady += HandlePlayerTurnReady;
 
             if (!_battlePresenter.TryInitialize())
             {
@@ -570,6 +571,8 @@ namespace TF.Composition
                 _isStartingBattle = false;
                 return false;
             }
+            
+            HandlePlayerTurnReady(_battleModel.CurrentState);
 
             // 戦闘画面への遷移後に、CPUの行動を許可する
             _battleCpu.SetEnabled(true);
@@ -617,7 +620,8 @@ namespace TF.Composition
             // モデルの参照を外す前に、演出の中断と購読解除を行う
             if (_battlePresenter != null)
             {
-                _battlePresenter.BattleFinished -= HandleBattleFinised;
+                _battlePresenter.BattleFinished -= HandleBattleFinished;
+                _battlePresenter.PlayerTurnReady -= HandlePlayerTurnReady;
                 _battlePresenter.Dispose();
                 _battlePresenter = null;
             }
@@ -629,7 +633,7 @@ namespace TF.Composition
         /// <summary>
         /// 最後の演出が完了したら、結果画面へ進む
         /// </summary>
-        private void HandleBattleFinised(BattleState state)
+        private void HandleBattleFinished(BattleState state)
         {
             if (_isReleased || state == null || !state.IsFinished || _gameFlow.CurrentState != GameState.Battle)
             {
@@ -654,8 +658,11 @@ namespace TF.Composition
                 Debug.LogError("結果画面へ遷移できませんでした。", this);
             }
 
-            // TODO LESSON03-09: 戦績の加算と保存を接続する。重複加算を防ぐ。
-            // 第3回・2コマ目: 終了した状態を一度だけ戦績へ加算し、変更があれば保存する。
+            if (_battleSessionService != null &&
+                _battleSessionService.TryCapture(state, _activeFirstCombatantId, _activeSecondCombatantId))
+            {
+                SaveBattleSessionIfNeeded();
+            }
         }
 
         /// <summary>
@@ -760,6 +767,38 @@ namespace TF.Composition
             ? "途中のバトルがあります。開始ボタンで続きから遊べます。"
             : "新しいバトルを開始します。", this);
             return true;
+        }
+
+        /// <summary>
+        /// 未保存の途中データを保存する
+        /// </summary>
+        private void SaveBattleSessionIfNeeded()
+        {
+            if (_battleSessionService == null || !_battleSessionService.HasUnsavedChanges)
+            {
+                return;
+            }
+
+            if (!_battleSessionService.TrySave())
+            {
+                Debug.LogWarning("途中のバトルを保存できませんでした。変更を保持し、次の保存機会に再試行します。", this);
+            }
+        }
+
+        private void HandlePlayerTurnReady(BattleState state)
+        {
+            if (_isReleased || CurrentState != GameState.Battle || _battleSessionService == null ||
+                _battleFlow == null || !_battleFlow.CanAcceptInput ||
+                state == null || state.ActionSide != BattleSide.First ||
+                !ReferenceEquals(state, _battleModel?.CurrentState))
+            {
+                return;
+            }
+
+            if (_battleSessionService.TryCapture(state, _activeFirstCombatantId, _activeSecondCombatantId))
+            {
+                SaveBattleSessionIfNeeded();
+            }
         }
 
         /// <summary>
