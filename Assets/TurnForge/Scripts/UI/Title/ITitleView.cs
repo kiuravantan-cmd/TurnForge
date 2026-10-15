@@ -2,19 +2,19 @@
 
 namespace TF.UI.Title
 {
-    /// <summary>
-    /// タイトル画面の操作通知と、入力受付の切り替えを定義
-    /// </summary>
+    /// <summary>タイトルの新規開始と再開の操作を定義する。</summary>
     public interface ITitleView
     {
-        /// <summary>
-        /// 新しい戦闘の開始が要求されたときに通知
-        /// </summary>
+        /// <summary>新しいバトルの開始が要求された通知。</summary>
         event UnityAction StartRequested;
-        
-        /// <summary>
-        /// 開始操作を受け付けるか設定
-        /// </summary>
+
+        /// <summary>保存したバトルの再開が要求された通知。</summary>
+        event UnityAction ResumeRequested;
+
+        /// <summary>タイトル全体の操作受付を切り替える。</summary>
         void SetInputEnabled(bool enabled);
+
+        /// <summary>再開できる保存データがあるかを表示へ反映する。</summary>
+        void SetResumeAvailable(bool available);
     }
 }

@@ -4,77 +4,108 @@ using UnityEngine.UI;
 
 namespace TF.UI.Title
 {
-    /// <summary>
-    /// タイトルの開始操作と、ボタンの入力受付を管理
-    /// </summary>
+    /// <summary>新規開始・再開の操作通知とボタン表示を担当する。</summary>
     [DisallowMultipleComponent]
     public sealed class TitleView : MonoBehaviour, ITitleView
     {
-        /// <summary>
-        /// 新しい戦闘を開始するボタン
-        /// </summary>
+        /// <summary>新しいバトルを始めるボタン。</summary>
         [SerializeField] private Button _startButton;
 
-        /// <summary>
-        /// Presenterから指定された入力受付状態
-        /// </summary>
-        private bool _isInputEnabled = false;
+        /// <summary>保存したバトルを再開するボタン。</summary>
+        [SerializeField] private Button _resumeButton;
 
-        /// <summary>
-        /// 新しい戦闘の開始が要求されたときに通知
-        /// </summary>
+        /// <summary>Presenterから指定された操作受付状態。</summary>
+        private bool _isInputEnabled;
+
+        /// <summary>再開できる保存データがあるか。</summary>
+        private bool _isResumeAvailable;
+
+        /// <summary>新しいバトルの開始を通知する。</summary>
         public event UnityAction StartRequested;
 
-        /// <summary>
-        /// 画面が有効化されるときに、ボタンのクリックイベントを登録
-        /// </summary>
+        /// <summary>保存したバトルの再開を通知する。</summary>
+        public event UnityAction ResumeRequested;
+
+        /// <summary>ボタン操作の通知を登録する。</summary>
         private void OnEnable()
         {
-            if (_startButton == null)
+            if (_startButton != null)
             {
-                Debug.LogError("開始ボタンが設定されていません", this);
-                return;
+                _startButton.onClick.AddListener(HandleStartClicked);
             }
 
-            _startButton.onClick.AddListener(HandleStartClicked);
-            _startButton.interactable = _isInputEnabled;
+            if (_resumeButton != null)
+            {
+                _resumeButton.onClick.AddListener(HandleResumeClicked);
+            }
+
+            if (_startButton == null || _resumeButton == null)
+            {
+                Debug.LogError("タイトルの新規開始・再開ボタンを設定してください。", this);
+            }
+
+            RefreshButtons();
         }
 
-        /// <summary>
-        /// 画面が無効化されるときに、ボタンのクリックイベントを解除
-        /// </summary>
-        private void OnDisable ()
+        /// <summary>非表示時に操作の通知を解除する。</summary>
+        private void OnDisable()
         {
             if (_startButton != null)
             {
                 _startButton.onClick.RemoveListener(HandleStartClicked);
             }
+
+            if (_resumeButton != null)
+            {
+                _resumeButton.onClick.RemoveListener(HandleResumeClicked);
+            }
         }
 
-        /// <summary>
-        /// Presenterから指定された入力受付状態を反映
-        /// </summary>
-        public void SetInputEnabled(bool isEnabled)
+        /// <summary>タイトル全体の操作受付を設定する。</summary>
+        public void SetInputEnabled(bool enabled)
         {
-            _isInputEnabled = isEnabled;
+            _isInputEnabled = enabled;
+            RefreshButtons();
+        }
 
+        /// <summary>再開データの有無を反映する。</summary>
+        public void SetResumeAvailable(bool available)
+        {
+            _isResumeAvailable = available;
+            RefreshButtons();
+        }
+
+        /// <summary>画面の受付状態と保存データの有無をボタンへ反映する。</summary>
+        private void RefreshButtons()
+        {
             if (_startButton != null)
             {
-                _startButton.interactable = isEnabled;
+                _startButton.interactable = _isInputEnabled;
+            }
+
+            if (_resumeButton != null)
+            {
+                _resumeButton.interactable = _isInputEnabled && _isResumeAvailable;
             }
         }
 
-        /// <summary>
-        /// 開始操作を受け付けるか設定
-        /// </summary>
+        /// <summary>操作できる場合だけ新規開始を通知する。</summary>
         private void HandleStartClicked()
         {
-            if (!isActiveAndEnabled || !_isInputEnabled || _startButton == null || !_startButton.IsInteractable())
+            if (isActiveAndEnabled && _isInputEnabled && _startButton != null && _startButton.IsInteractable())
             {
-                return;
+                StartRequested?.Invoke();
             }
+        }
 
-            StartRequested?.Invoke();
+        /// <summary>再開データがあり操作できる場合だけ再開を通知する。</summary>
+        private void HandleResumeClicked()
+        {
+            if (isActiveAndEnabled && _isInputEnabled && _isResumeAvailable
+                && _resumeButton != null && _resumeButton.IsInteractable())
+            {
+                ResumeRequested?.Invoke();
+            }
         }
     }
 }

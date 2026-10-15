@@ -161,9 +161,10 @@ namespace TF.Composition
         /// <summary>現在のバトルで使う2人目のマスタID。</summary>
         private ulong _activeSecondCombatantId;
 
-        /// <summary>
-        /// 現在のゲーム全体の状態
-        /// </summary>
+        /// <summary>途中のバトルを再開できるか。</summary>
+        public bool CanResumeBattle => _battleSessionService?.HasResumeData == true;
+
+        /// <summary>現在のゲーム全体の状態。</summary>
         public GameState CurrentState => _gameFlow?.CurrentState ?? GameState.Inactive;
 
         private void Awake()
@@ -228,7 +229,8 @@ namespace TF.Composition
                 return;
             }
 
-            _titlePresenter = new TitlePresenter(_titleView, _gameFlow, TryStartBattleAsync);
+            _titlePresenter = new TitlePresenter(
+                _titleView, _gameFlow, TryStartBattleAsync, TryResumeBattleAsync, () => CanResumeBattle);
 
             if (!_titlePresenter.TryInitialize())
             {
@@ -398,7 +400,7 @@ namespace TF.Composition
         /// <summary>
         /// 読み込み済みマスタから、1戦分のオブジェクトを生成する。
         /// </summary>
-        private bool TryComposeBattle()
+        private bool TryComposeBattle(bool resumeSavedBattle)
         {
             MasterDataAccessor accessor = MasterDataAccessor.Instance;
             if (accessor == null || !accessor.IsInitialized)
@@ -406,8 +408,8 @@ namespace TF.Composition
                 return false;
             }
             
-            // 再開可能な保存データがあれば、そのバトルを選ぶ。
-            bool shouldResume = _battleSessionService != null && _battleSessionService.HasResumeData;
+            // 再開が選ばれた場合だけ、保存済みのバトルを使う。
+            bool shouldResume = resumeSavedBattle && CanResumeBattle;
             ulong firstId = shouldResume ? _battleSessionService.CurrentData.FirstCombatantId : _firstCombatantId;
             ulong secondId = shouldResume ? _battleSessionService.CurrentData.SecondCombatantId : _secondCombatantId;
 
@@ -497,7 +499,19 @@ namespace TF.Composition
         /// <summary>
         /// タイトルまたは結果画面から、準備を経由して戦闘を開始
         /// </summary>
-        public async UniTask<bool> TryStartBattleAsync()
+        public UniTask<bool> TryStartBattleAsync()
+        {
+            return TryStartBattleAsync(false);
+        }
+
+        /// <summary>タイトルから、保存したバトルの再開を要求する。</summary>
+        public UniTask<bool> TryResumeBattleAsync()
+        {
+            return TryStartBattleAsync(true);
+        }
+
+        /// <summary>選んだ開始方法で準備し、開始成功後にだけ保存を更新する。</summary>
+        private async UniTask<bool> TryStartBattleAsync(bool resumeSavedBattle)
         {
             if (_isReleased || _isStartingBattle || _gameFlow == null || _battleLoading == null)
             {
@@ -519,6 +533,12 @@ namespace TF.Composition
                     return false;
             }
             
+            // 再開はタイトルから、途中データがある場合だけ受け付ける。
+            if (resumeSavedBattle && (CurrentState != GameState.Title || !CanResumeBattle))
+            {
+                return false;
+            }
+
             _isStartingBattle = true;
             
             // 前の戦闘の利用側を片付けてから、アセットを解放
@@ -539,7 +559,7 @@ namespace TF.Composition
                 return false;
             }
 
-            if (!TryComposeBattle())
+            if (!TryComposeBattle(resumeSavedBattle))
             {
                 ReleaseBattle();
                 _battleLoading.CancelPreparation();
@@ -790,7 +810,7 @@ namespace TF.Composition
             }
 
             Debug.Log(_battleSessionService.HasResumeData
-                ? "途中のバトルがあります。開始ボタンで続きから遊べます。"
+                ? "途中のバトルがあります。「続きから」で再開できます。"
                 : "新しいバトルを開始します。", this);
             return true;
         }
