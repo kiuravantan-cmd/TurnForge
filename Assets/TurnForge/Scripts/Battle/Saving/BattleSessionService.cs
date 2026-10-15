@@ -110,6 +110,12 @@ namespace TF.Battle.Saving
             CombatantState first = initialState.FirstCombatant;
             CombatantState second = initialState.SecondCombatant;
             
+            if (CurrentData.FirstHp > first.MaxHp || CurrentData.SecondHp > second.MaxHp ||
+                CurrentData.FirstEnergy > first.MaxEnergy || CurrentData.SecondEnergy > second.MaxEnergy)
+            {
+                return false;
+            }
+            
             state = new BattleState(
                 new CombatantState(BattleSide.First, CurrentData.FirstHp, first.MaxHp,
                     CurrentData.FirstEnergy, first.MaxEnergy, CurrentData.FirstIsGuarding),
