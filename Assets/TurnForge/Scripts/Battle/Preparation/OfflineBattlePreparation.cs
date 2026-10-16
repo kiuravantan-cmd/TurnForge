@@ -15,16 +15,12 @@ namespace TF.Battle.Preparation
         /// </summary>
         public async UniTask<bool> PrepareAsync(CancellationToken token)
         {
-            if (token.IsCancellationRequested)
-            {
-                return false;
-            }
-
             // 同フレーム内で戦闘画面まで切り替わることを避ける
-            await UniTask.Delay(TimeSpan.FromSeconds(3), cancellationToken: token);
+            bool canceled = await UniTask.Delay(TimeSpan.FromSeconds(3), cancellationToken: token)
+                .SuppressCancellationThrow();
 
             // 待機中に中断された場合は、準備失敗として返す
-            if (token.IsCancellationRequested)
+            if (canceled || token.IsCancellationRequested)
             {
                 return false;
             }

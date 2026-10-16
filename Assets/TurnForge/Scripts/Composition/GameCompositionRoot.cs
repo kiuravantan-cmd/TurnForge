@@ -171,6 +171,11 @@ namespace TF.Composition
         /// 現在のゲーム全体の状態
         /// </summary>
         public GameState CurrentState => _gameFlow?.CurrentState ?? GameState.Inactive;
+        
+        /// <summary>
+        /// 途中のバトルを再開できるか
+        /// </summary>
+        public bool CanResumeBattle => _battleSessionService?.HasResumeData == true;
 
         private void Awake()
         {
@@ -234,7 +239,8 @@ namespace TF.Composition
                 return;
             }
 
-            _titlePresenter = new TitlePresenter(_titleView, _gameFlow, TryStartBattleAsync);
+            _titlePresenter = new TitlePresenter(
+                _titleView, _gameFlow, TryStartBattleAsync, TryResumeBattleAsync, () => CanResumeBattle);
 
             if (!_titlePresenter.TryInitialize())
             {
@@ -412,7 +418,7 @@ namespace TF.Composition
         // TODO LESSON02-11: 第2回・4コマ目で未接続パッドの案内と設定へ戻る操作を接続する。
         // 戦闘入力を止めても、方式を選び直すキーボード・クリックの入口は残す。
         // 講師準備: 設定画面・InputActionの参照・回復ボタンの枠を配布する。
-        private bool TryComposeBattle()
+        private bool TryComposeBattle(bool resumeSavedBattle)
         {
             // TODO LESSON05-02: この手動の組み立てをVContainerへ移行する。
             // 第5回・2〜3コマ目: LifetimeScopeでModel・Rules・Presenter・CPUなどの依存を登録する。
@@ -425,7 +431,7 @@ namespace TF.Composition
                 return false;
             }
 
-            bool shouldResume = _battleSessionService != null && _battleSessionService.HasResumeData;
+            bool shouldResume = resumeSavedBattle && CanResumeBattle;
             ulong firstId = shouldResume ? _battleSessionService.CurrentData.FirstCombatantId : _firstCombatantId;
             ulong secondId = shouldResume ? _battleSessionService.CurrentData.SecondCombatantId : _secondCombatantId;
             
@@ -510,11 +516,21 @@ namespace TF.Composition
 
             return true;
         }
+        
+        public UniTask<bool> TryStartBattleAsync()
+        {
+            return TryStartBattleAsync(false);
+        }
+        
+        public UniTask<bool> TryResumeBattleAsync()
+        {
+            return TryStartBattleAsync(true);
+        }
 
         /// <summary>
         /// タイトルまたは結果画面から、準備を経由して戦闘を開始
         /// </summary>
-        public async UniTask<bool> TryStartBattleAsync()
+        private async UniTask<bool> TryStartBattleAsync(bool resumeSavedBattle)
         {
             if (_isReleased || _isStartingBattle || _gameFlow == null || _battleLoading == null)
             {
@@ -535,9 +551,15 @@ namespace TF.Composition
                 default:
                     return false;
             }
-            
+
+            // 再開はタイトルから、途中データがある場合だけ受け付ける。
+            if (resumeSavedBattle && (CurrentState != GameState.Title || !CanResumeBattle))
+            {
+                return false;
+            }
+
             _isStartingBattle = true;
-            
+
             // 前の戦闘の利用側を片付けてから、アセットを解放
             ReleaseBattle();
 
@@ -556,7 +578,7 @@ namespace TF.Composition
                 return false;
             }
 
-            if (!TryComposeBattle())
+            if (!TryComposeBattle(resumeSavedBattle))
             {
                 ReleaseBattle();
                 _battleLoading.CancelPreparation();
@@ -571,7 +593,8 @@ namespace TF.Composition
                 _isStartingBattle = false;
                 return false;
             }
-            
+
+            // 開始・再開できた時点を、最初の保存の区切りにする。
             HandlePlayerTurnReady(_battleModel.CurrentState);
 
             // 戦闘画面への遷移後に、CPUの行動を許可する
@@ -827,8 +850,7 @@ namespace TF.Composition
         /// </summary>
         private void OnDestroy()
         {
-            // TODO LESSON03-10: 終了時の未保存データの再保存を接続する。
-            // 第3回・2コマ目: 終了前に未保存の変更を保存する。終了時だけの保存に頼らない。
+            SaveBattleSessionIfNeeded();
             Release();
         }
     }   
