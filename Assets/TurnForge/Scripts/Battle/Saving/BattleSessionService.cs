@@ -88,11 +88,41 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TryRestore(BattleState initialState, ulong firstId, ulong secondId, out BattleState state)
         {
-            // 第3回・2コマ目のライブコーディングで、この関数全体を実装する。
-            // 保存した値とマスタの最大値からBattleStateを作る。
             // 4コマ目の課題4で、マスタの最大値を超える値を拒否する条件を追加する。
             state = null;
-            return false;
+            if (!IsInitialized || !HasResumeData)
+            {
+                return false;
+            }
+
+            if (initialState?.FirstCombatant == null || initialState.SecondCombatant == null)
+            {
+                return false;
+            }
+
+            if (!IsValidData(CurrentData) ||
+                CurrentData.FirstCombatantId != firstId || CurrentData.SecondCombatantId != secondId)
+            {
+                return false;
+            }
+            
+            // 最大値はJSONではなく、今のマスタから取得
+            CombatantState first = initialState.FirstCombatant;
+            CombatantState second = initialState.SecondCombatant;
+            
+            if (CurrentData.FirstHp > first.MaxHp || CurrentData.SecondHp > second.MaxHp ||
+                CurrentData.FirstEnergy > first.MaxEnergy || CurrentData.SecondEnergy > second.MaxEnergy)
+            {
+                return false;
+            }
+            
+            state = new BattleState(
+                new CombatantState(BattleSide.First, CurrentData.FirstHp, first.MaxHp,
+                    CurrentData.FirstEnergy, first.MaxEnergy, CurrentData.FirstIsGuarding),
+                new CombatantState(BattleSide.Second, CurrentData.SecondHp, second.MaxHp,
+                    CurrentData.SecondEnergy, second.MaxEnergy, CurrentData.SecondIsGuarding),
+                CurrentData.ActionSide, CurrentData.TurnNumber, false);
+            return true;
         }
 
         /// <summary>
@@ -100,9 +130,20 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TryCapture(BattleState state, ulong firstId, ulong secondId)
         {
-            // 第3回・1コマ目のライブコーディングで、この関数全体を実装する。
-            // 状態を保存用データへ写し、未保存の印を付ける。
-            return false;
+            if (!IsInitialized || state?.FirstCombatant == null || state.SecondCombatant == null)
+            {
+                return false;
+            }
+            
+            var data = new BattleSessionSaveData(state, firstId, secondId);
+            if (!IsValidData(data))
+            {
+                return false;
+            }
+            
+            CurrentData = data;
+            HasUnsavedChanges = true;
+            return true;
         }
 
         /// <summary>
@@ -110,9 +151,23 @@ namespace TF.Battle.Saving
         /// </summary>
         public bool TrySave()
         {
-            // 第3回・1コマ目のライブコーディングで、この関数全体を実装する。
-            // 保存に成功した場合だけ、未保存の印を下ろす。
-            return false;
+            if (_storage == null || !IsInitialized)
+            {
+                return false;
+            }
+
+            if (!HasUnsavedChanges)
+            {
+                return true;
+            }
+
+            if (!IsValidData(CurrentData) || !_storage.TrySave(SaveKey, CurrentData))
+            {
+                return false;
+            }
+            
+            HasUnsavedChanges = false;
+            return true;
         }
 
         /// <summary>
