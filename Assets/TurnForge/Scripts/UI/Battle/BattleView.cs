@@ -93,6 +93,11 @@ namespace TF.UI.Battle
         /// Presenterから使用可能と通知されたコマンド
         /// </summary>
         private readonly HashSet<BattleCommand> _availableCommands = new HashSet<BattleCommand>();
+        
+        /// <summary>
+        /// 警告していない時の、自分の状態欄の色
+        /// </summary>
+        private Color _normalFirstStatusColor;
 
         /// <summary>
         /// コマンドが選択されたときに通知
@@ -108,6 +113,14 @@ namespace TF.UI.Battle
         /// 選択中のコマンドの取り消し操作を通知
         /// </summary>
         public event UnityAction CancelRequested;
+
+        private void Awake()
+        {
+            if (_firstStatus != null)
+            {
+                _normalFirstStatusColor = _firstStatus.color;
+            }
+        }
 
         /// <summary>
         /// ボタン操作の購読を開始
@@ -146,6 +159,17 @@ namespace TF.UI.Battle
             if (state.TurnNumber == 1 && !state.IsFinished)
             {
                 SetText(_resultText, string.Empty);
+            }
+        }
+
+        /// <summary>
+        /// 自分のHPが少ないことを、既存のHP欄へ表示
+        /// </summary>
+        public void SetLowHpWarning(bool isLowHp)
+        {
+            if (_firstStatus != null)
+            {
+                _firstStatus.color = isLowHp ? Color.red : _normalFirstStatusColor;
             }
         }
 
@@ -194,8 +218,6 @@ namespace TF.UI.Battle
         {
             if (!token.IsCancellationRequested && result?.NextState != null)
             {
-                // 第1回の確認に必要な即時表示は講師基盤として提供する。
-                Render(result.NextState);
                 SetText(_resultText, message ?? string.Empty);
             }
 

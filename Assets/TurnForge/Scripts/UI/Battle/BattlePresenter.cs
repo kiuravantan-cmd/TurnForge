@@ -9,6 +9,7 @@ using TF.Battle.Flow;
 using TF.Battle.Models;
 using TF.GameFlow;
 using UnityEngine.Events;
+using R3;
 
 namespace TF.UI.Battle
 {
@@ -41,7 +42,17 @@ namespace TF.UI.Battle
         /// Presenterの破棄時に演出を中断する通知元
         /// </summary>
         private readonly CancellationTokenSource _lifeTimeCts = new CancellationTokenSource();
+        
+        /// <summary>
+        /// このPresenterが受け取るR3の購読をまとめる
+        /// </summary>
+        private readonly CompositeDisposable _subscriptions = new CompositeDisposable();
 
+        /// <summary>
+        /// この画面から今操作できるかを通知する
+        /// </summary>
+        private readonly ReactiveProperty<bool> _canAcceptInput = new ReactiveProperty<bool>(false);
+        
         /// <summary>
         /// 選択中のコマンド。未選択の場合はnull
         /// </summary>
@@ -118,10 +129,46 @@ namespace TF.UI.Battle
             _view.CancelRequested += HandleCancelRequested;
             _isInitialized = true;
 
-            _view.Render(_model.CurrentState);
+            // 操作可否の現在値を受け取り、以後の変化を表示へ渡す
+            _canAcceptInput.Subscribe(_view.SetInputEnabled).AddTo(_subscriptions);
+            
+            // 最初に現在の状態を受け取り、その後も変更を受け取る
+            _model.StateChanged.Subscribe(HandleStateChanged).AddTo(_subscriptions);
+
+            _model.StateChanged
+                .Select(IsLowHp)
+                .DistinctUntilChanged()
+                .Subscribe(SetLowHpWarning)
+                .AddTo(_subscriptions);
+            
             _view.SetSelectedCommand(_selectedCommand);
-            RefreshInput();
             return true;
+        }
+
+        private bool IsLowHp(BattleState state)
+        {
+            return state.FirstCombatant.Hp > 0 && (long)state.FirstCombatant.Hp * 4 <= state.FirstCombatant.MaxHp;
+        }
+
+        private void SetLowHpWarning(bool isLowHp)
+        {
+            UnityEngine.Debug.Log($"自分のHP警告：{isLowHp}");
+            _view.SetLowHpWarning(isLowHp);
+        }
+
+        /// <summary>
+        /// HP・エネルギー・ターンを表示し、操作の条件を更新する
+        /// </summary>
+        private void HandleStateChanged(BattleState state)
+        {
+            if (_isDisposed || state == null)
+            {
+                return;
+            }
+
+            UnityEngine.Debug.Log($"状態通知：ターン{state.TurnNumber}");
+            _view.Render(state);
+            RefreshInput();
         }
 
         /// <summary>
@@ -187,7 +234,7 @@ namespace TF.UI.Battle
             }
 
             _isExecuting = true;
-            _view.SetInputEnabled(false);
+            _canAcceptInput.Value = false;
 
             // 実行できない指示では演出を開始しない
             if (!_flow.TryExecute(request, out BattleResult result))
@@ -214,9 +261,6 @@ namespace TF.UI.Battle
                 _lifeTimeCts?.Dispose();
                 return false;
             }
-
-            // 演出が中断されても、確定済みの状態は維持
-            _view.Render(_model.CurrentState);
 
             if (!_flow.TryCompleteEffects(result))
             {
@@ -265,18 +309,8 @@ namespace TF.UI.Battle
             }
 
             _view.SetSelectedCommand(_selectedCommand);
-            _view.SetInputEnabled(canAcceptInput);
 
-            // TODO LESSON02-05: 各技が使えるか確かめ、選択内容とボタンの操作を更新する。
-            // 第2回・1コマ目: 各技のModel.CanExecuteをSetCommandEnabledへ反映する。
-            // 使用不可になった選択を解除し、選択表示と全体のSetInputEnabledを更新する。
-            // 第2回・3コマ目: 方式変更時もPresenterの選択とViewの表示の両方を解除する。
-            // 配布時は未実装の操作が実行されないように全体を無効化する。
-
-            // TODO LESSON04-02: R3で操作できるかどうかの変化を購読し、再表示時の重複購読を防ぐ。
-            // 第4回・2〜3コマ目: HP・エネルギー・操作可否の変化を購読し、Viewの表示へ反映する。
-            // 購読は初期化時に1回だけ開始する。RefreshInputが呼ばれるたびに追加しない。
-            // 第4回・4コマ目: HPが少ない場合の警告表示を購読から追加する。
+            _canAcceptInput.Value = canAcceptInput;
         }
 
         /// <summary>
@@ -284,8 +318,6 @@ namespace TF.UI.Battle
         /// </summary>
         public void Dispose()
         {
-            // TODO LESSON04-03: 追加したR3の購読も、この所有者の終了時に解放する。
-            // 第4回・3コマ目: 購読をまとめて保持し、Dispose時に解除する。再戦で前の購読を残さない。
             if (_isDisposed)
             {
                 return;
@@ -300,6 +332,10 @@ namespace TF.UI.Battle
                 _view.CancelRequested -= HandleCancelRequested;
                 _isInitialized = false;
             }
+            
+            // Viewへの受け取りを先に止めてから、通知元を終了する
+            _subscriptions.Dispose();
+            _canAcceptInput.Dispose();
 
             _lifeTimeCts?.Cancel();
 

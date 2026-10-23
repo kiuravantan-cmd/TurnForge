@@ -649,6 +649,8 @@ namespace TF.Composition
                 _battlePresenter = null;
             }
 
+            // 利用側のPresenterやCPUを終了した後に、通知元を終了する
+            _battleModel?.Dispose();
             _battleFlow = null;
             _battleModel = null;
         }

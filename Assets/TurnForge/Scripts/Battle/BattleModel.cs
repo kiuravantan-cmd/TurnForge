@@ -1,3 +1,5 @@
+using System;
+using R3;
 using TF.Battle.Commands;
 using TF.Battle.Models;
 using TF.Battle.Rules;
@@ -6,9 +8,9 @@ using UnityEngine.Events;
 namespace TF.Battle
 {
     /// <summary>
-    /// 現在のHPや行動する番を覚えておき、行動後のデータに更新する
+    /// 現在の戦闘状態を保存し、変更を通知する
     /// </summary>
-    public sealed class BattleModel
+    public sealed class BattleModel : IDisposable
     {
         /// <summary>
         /// 行動の確認と状態の計算を担当するルール
@@ -16,19 +18,24 @@ namespace TF.Battle
         private readonly BattleRules _rules;
         
         /// <summary>
-        /// 現在の戦闘状態
+        /// 現在の戦闘状態とその変更通知を待つ
         /// </summary>
-        private BattleState  _currentState;
+        private readonly ReactiveProperty<BattleState> _currentState;
+        
+        /// <summary>
+        /// このModelが終了したか
+        /// </summary>
+        private bool _isDisposed = false;
         
         /// <summary>
         /// 現在の戦闘状態（プロパティ）
         /// </summary>
-        public BattleState CurrentState => _currentState;
+        public BattleState CurrentState => _currentState.Value;
 
         /// <summary>
-        /// 実行できる行動の結果を適用した後に通知
+        /// 状態の通知元
         /// </summary>
-        public event UnityAction<BattleResult> ActionResolved;
+        public ReadOnlyReactiveProperty<BattleState> StateChanged => _currentState;
         
         /// <summary>
         /// 戦闘ルールと初期状態を受け取る
@@ -36,7 +43,7 @@ namespace TF.Battle
         public BattleModel(BattleRules rules, BattleState initialState)
         {
             _rules = rules;
-            _currentState = initialState;
+            _currentState = new ReactiveProperty<BattleState>(initialState);
         }
 
         /// <summary>
@@ -46,15 +53,15 @@ namespace TF.Battle
         /// <param name="command">確認するコマンド</param>
         public bool CanExecute(BattleSide actor, BattleCommand command)
         {
-            if (_rules == null || _currentState == null)
+            if (_isDisposed || _rules == null || CurrentState == null)
             {
                 return false;
             }
 
             // 現在のターン番号を使って確認用の指示を作成
-            var request = new BattleActionRequest(actor, _currentState.TurnNumber, command);
+            var request = new BattleActionRequest(actor, CurrentState.TurnNumber, command);
 
-            return _rules.CanExecute(_currentState, request);
+            return _rules.CanExecute(CurrentState, request);
         }
 
         /// <summary>
@@ -64,26 +71,34 @@ namespace TF.Battle
         {
             result = null;
 
-            if (_rules == null || _currentState == null)
+            if (_rules == null || _currentState == null || CurrentState == null)
             {
                 return false;
             }
 
-            if (!_rules.TryExecute(_currentState, request, out result))
+            if (!_rules.TryExecute(CurrentState, request, out result))
             {
                 return false;
             }
 
-            // 通知先が最新の状態を読めるよう、先に置き換える。
-            _currentState = result.NextState;
-            ActionResolved?.Invoke(result);
+            // Valueの置き換えで、今の状態の更新と通知を行う
+            _currentState.Value = result.NextState;
+            
             return true;
+        }
 
-            // TODO LESSON04-01: R3による状態通知へ移行し、購読の所有者と寿命を決める。
-            // 第4回・1〜2コマ目: 現在状態の通知元をR3で用意し、成功時にNextStateを通知する。
-            // 変更前の状態を保持する設計は維持し、購読側から状態を直接変更させない。
-            // 通知元を戦闘単位で所有し、終了時に解放する。導入前のイベントとの二重通知を避ける。
-            return false;
+        /// <summary>
+        /// このモデルの状態通知を終了する
+        /// </summary>
+        public void Dispose()
+        {
+            if (_isDisposed)
+            {
+                return;
+            }
+            
+            _isDisposed = true;
+            _currentState.Dispose();
         }
     }
 }

@@ -44,6 +44,11 @@ namespace TF.UI.Battle
         /// HP・エネルギー・行動する番などを指定された状態で表示
         /// </summary>
         void Render(BattleState state);
+
+        /// <summary>
+        /// 自分のHPが少ないときの警告表示を切り替える
+        /// </summary>
+        void SetLowHpWarning(bool isLowHp);
         
         /// <summary>
         /// 戦闘操作全体の受付を切り替える
